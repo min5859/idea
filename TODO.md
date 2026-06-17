@@ -31,7 +31,7 @@
 
 ## Phase 3 — 메신저 UI (~2시간)
 - [ ] `ChatList` — 채팅방 목록 + presence 뱃지 (성공 기준 ①)
-- [ ] `ChatView` — 말풍선 + 입력창 + EventSource 스트리밍 (성공 기준 ②)
+- [ ] `ChatView` — 말풍선 + 입력창 + `fetch`+`ReadableStream` SSE 스트리밍 (성공 기준 ②)
 - [ ] 보낸/받은 말풍선 스타일, 자동 스크롤, "입력 중…" 인디케이터
 
 ## Phase 4 — 그룹방 오케스트레이션 (~1.5시간) ★데모 하이라이트
