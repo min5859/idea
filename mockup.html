@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HermesTalk — 목업</title>
+<style>
+  :root{
+    --rail:#1f2430; --rail-active:#3b82f6; --sidebar:#f4f5f7; --bg:#ffffff;
+    --line:#e3e6ea; --text:#1f2430; --muted:#7a828e; --me:#3b82f6;
+    --bot:#eef0f3; --delegate:#fff7e6; --delegate-line:#f0c36d;
+    --online:#22c55e; --busy:#f59e0b; --idle:#cbd2da;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    color:var(--text);background:var(--bg);display:flex;height:100vh;overflow:hidden;font-size:14px}
+
+  /* ── 좌측 네비 레일 ── */
+  .rail{width:64px;background:var(--rail);display:flex;flex-direction:column;align-items:center;
+    padding:14px 0;gap:6px;flex-shrink:0}
+  .rail .logo{color:#fff;font-weight:800;font-size:18px;margin-bottom:16px}
+  .rail button{width:46px;height:46px;border:0;border-radius:12px;background:transparent;color:#aeb6c2;
+    font-size:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:.15s}
+  .rail button span{font-size:9px}
+  .rail button:hover{background:#2b313e;color:#fff}
+  .rail button.active{background:var(--rail-active);color:#fff}
+  .rail .me{margin-top:auto;width:34px;height:34px;border-radius:50%;background:#3b82f6;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700}
+
+  /* ── 공통 뷰 ── */
+  .view{flex:1;display:none;min-width:0}
+  .view.active{display:flex}
+
+  /* ── 채팅 ── */
+  .chatlist{width:300px;background:var(--sidebar);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;flex-shrink:0}
+  .chatlist .search{padding:14px}
+  .chatlist .search input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+  .chatlist .rooms{overflow-y:auto;flex:1}
+  .room{display:flex;gap:11px;padding:11px 14px;cursor:pointer;border-left:3px solid transparent}
+  .room:hover{background:#e9ebef}
+  .room.active{background:#e4e9f5;border-left-color:var(--me)}
+  .ava{width:42px;height:42px;border-radius:12px;background:#dfe3e8;display:flex;align-items:center;
+    justify-content:center;font-size:21px;flex-shrink:0;position:relative}
+  .dot{position:absolute;right:-2px;bottom:-2px;width:13px;height:13px;border-radius:50%;border:2px solid var(--sidebar)}
+  .dot.online{background:var(--online)} .dot.busy{background:var(--busy)} .dot.idle{background:var(--idle)}
+  .room .meta{min-width:0;flex:1}
+  .room .name{font-weight:600;display:flex;justify-content:space-between}
+  .room .name .grp{font-size:10px;background:#d7def0;color:#3551a3;padding:1px 6px;border-radius:8px;font-weight:700}
+  .room .last{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .legend{padding:9px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;display:flex;gap:12px}
+  .legend i{font-style:normal}.lg{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;vertical-align:middle}
+
+  .chatmain{flex:1;display:flex;flex-direction:column;min-width:0}
+  .chathead{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px}
+  .chathead .ava{width:38px;height:38px;font-size:19px}
+  .chathead .h-name{font-weight:700}
+  .chathead .h-sub{color:var(--muted);font-size:12px}
+  .chathead .status{margin-left:auto;font-size:12px;color:var(--busy);font-weight:600}
+  .msgs{flex:1;overflow-y:auto;padding:22px 26px;background:#fafbfc}
+  .turn{margin-bottom:16px;display:flex;flex-direction:column}
+  .turn.me{align-items:flex-end}
+  .bubble{max-width:62%;padding:11px 14px;border-radius:14px;line-height:1.5;box-shadow:0 1px 1px rgba(0,0,0,.04)}
+  .turn.me .bubble{background:var(--me);color:#fff;border-bottom-right-radius:4px}
+  .turn.bot .bubble{background:var(--bot);border-bottom-left-radius:4px}
+  .sender{font-size:12px;color:var(--muted);margin:0 4px 4px;font-weight:600}
+  /* 위임 말풍선 */
+  .delegate{max-width:62%;border:1.5px dashed var(--delegate-line);background:var(--delegate);
+    border-radius:14px;padding:10px 13px;display:flex;align-items:center;gap:9px;color:#8a6d18}
+  .delegate .mini{width:26px;height:26px;border-radius:8px;background:#fff;display:flex;align-items:center;
+    justify-content:center;font-size:15px}
+  .typing span{display:inline-block;width:6px;height:6px;background:#b99;border-radius:50%;animation:bl 1s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,80%{opacity:.3}40%{opacity:1}}
+  .composer{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px}
+  .composer input{flex:1;padding:11px 14px;border:1px solid var(--line);border-radius:10px}
+  .composer button{padding:0 22px;border:0;border-radius:10px;background:var(--me);color:#fff;font-weight:700;cursor:pointer}
+
+  /* ── 스킬 보드 / 칸반 공통 보드 ── */
+  .board{flex:1;display:flex;flex-direction:column;min-width:0}
+  .board-head{padding:16px 24px;border-bottom:1px solid var(--line)}
+  .board-head h2{font-size:17px}.board-head p{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .cols{flex:1;display:flex;gap:14px;padding:18px 24px;overflow-x:auto;background:#fafbfc;align-items:flex-start}
+  .col{background:var(--sidebar);border-radius:12px;min-width:210px;max-width:240px;flex:1;display:flex;flex-direction:column}
+  .col-head{padding:11px 13px;font-weight:700;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--line)}
+  .col-head .cnt{margin-left:auto;font-size:11px;color:var(--muted);background:#e3e6ea;border-radius:8px;padding:1px 7px}
+  .col-body{padding:10px;display:flex;flex-direction:column;gap:9px;min-height:60px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .card .t{font-weight:600}.card .d{color:var(--muted);font-size:12px;margin-top:3px}
+  .card .who{margin-top:8px;font-size:11.5px;color:#3551a3;display:flex;align-items:center;gap:5px}
+  .kanban .card{cursor:grab}.kanban .card:active{cursor:grabbing}
+  .kanban .col-body.over{outline:2px dashed var(--me);outline-offset:-4px;border-radius:8px}
+  .tag{font-size:10px;padding:1px 7px;border-radius:8px;font-weight:700}
+  .tag.skill{background:#e6f0ff;color:#2657c4}
+</style>
+</head>
+<body>
+
+<!-- 좌측 레일 -->
+<nav class="rail">
+  <div class="logo">H</div>
+  <button class="navbtn active" data-view="chat">💬<span>채팅</span></button>
+  <button class="navbtn" data-view="skill">🗂<span>스킬</span></button>
+  <button class="navbtn" data-view="kanban">📋<span>칸반</span></button>
+  <div class="me">W</div>
+</nav>
+
+<!-- ============ 채팅 뷰 ============ -->
+<section class="view active" id="view-chat">
+  <aside class="chatlist">
+    <div class="search"><input placeholder="🔍 검색…"></div>
+    <div class="rooms" id="rooms"></div>
+    <div class="legend">
+      <i><span class="lg" style="background:var(--online)"></span>온라인</i>
+      <i><span class="lg" style="background:var(--busy)"></span>작업중</i>
+      <i><span class="lg" style="background:var(--idle)"></span>유휴</i>
+    </div>
+  </aside>
+  <div class="chatmain">
+    <div class="chathead" id="chathead"></div>
+    <div class="msgs" id="msgs"></div>
+    <div class="composer"><input placeholder="메시지 입력…"><button>전송</button></div>
+  </div>
+</section>
+
+<!-- ============ 스킬 보드 뷰 ============ -->
+<section class="view" id="view-skill">
+  <div class="board">
+    <div class="board-head">
+      <h2>🗂 스킬 보드</h2>
+      <p>열 = 에이전트, 카드 = 그 에이전트가 가진 skill. 누가 무엇을 할 수 있는지 한눈에. (read-only · API 우선, 없으면 config)</p>
+    </div>
+    <div class="cols" id="skillcols"></div>
+  </div>
+</section>
+
+<!-- ============ 칸반 뷰 ============ -->
+<section class="view" id="view-kanban">
+  <div class="board">
+    <div class="board-head">
+      <h2>📋 작업 칸반</h2>
+      <p>그룹방에서 위임된 작업이 카드로 생성되어 레인을 따라 이동. 카드를 드래그해 옮겨 보세요. (로컬 동작 → Hermes 네이티브 Kanban write-back 연동)</p>
+    </div>
+    <div class="cols kanban" id="kanbancols"></div>
+  </div>
+</section>
+
+<script>
+/* ── 에이전트 정의 ── */
+const AGENTS = {
+  leader:{name:'팀리더봇', emoji:'👑', presence:'busy',   isLeader:true},
+  driver:{name:'드라이버봇', emoji:'🐧', presence:'online'},
+  design:{name:'설계봇',   emoji:'📐', presence:'idle'},
+  impl:  {name:'구현봇',   emoji:'⌨️', presence:'idle'},
+  review:{name:'리뷰봇',   emoji:'🔍', presence:'busy'},
+  debug: {name:'디버그봇', emoji:'🐞', presence:'online'},
+  report:{name:'주간보고봇',emoji:'📊', presence:'idle'},
+  deck:  {name:'발표봇',   emoji:'🎤', presence:'idle'},
+};
+
+/* ── 채팅방 목록 ── */
+const ROOMS = [
+  {id:'leader', group:true,  last:'취합 완료. 주간보고 초안을 정리했어요.'},
+  {id:'driver', last:'패치 확인했어요. probe 경로 점검 필요합니다.'},
+  {id:'review', last:'3건 지적사항: 락 해제 누락, 매직넘버…'},
+  {id:'report', last:'이번 주 주간보고 반영 완료.'},
+  {id:'debug',  last:'null deref로 보입니다. probe()에서…'},
+  {id:'design', last:'드라이버 계층 분리안 초안 드릴게요.'},
+];
+
+/* ── 대화 내용 (데모 시나리오) ── */
+const CONVOS = {
+  leader:[
+    {me:true, text:'어제 올린 드라이버 패치 리뷰하고 주간보고에 반영해줘'},
+    {from:'leader', text:'리뷰봇·주간보고봇에 위임할게요.'},
+    {delegate:'review', status:'입력 중…'},
+    {from:'review', text:'리뷰 완료 — 락 해제 누락 1건, 매직넘버 2건, 에러 경로 미처리 1건 확인했습니다.'},
+    {delegate:'report', status:'주간보고 반영 중…'},
+    {from:'report', text:'주간보고 "드라이버" 섹션에 패치 3건 리뷰 결과 반영했습니다.'},
+    {from:'leader', text:'취합 완료. 주간보고 초안:\n• 드라이버 패치 3건 리뷰(지적 4건, 수정 요청)\n• checkpatch 통과\n• 다음 주: 에러 경로 보강'},
+  ],
+  debug:[
+    {me:true, text:'이 커널 패닉 로그 원인 분석해줘'},
+    {from:'debug', text:'null deref로 보입니다. probe()에서 devm_kzalloc 실패 후 free된 포인터를 다시 참조하고 있어요. 해당 라인에 NULL 체크 추가가 필요합니다.'},
+  ],
+  driver:[
+    {me:true, text:'이번 DTS 변경 반영해줘'},
+    {from:'driver', text:'패치 확인했어요. compatible 문자열과 reg 매핑은 맞는데, probe 경로에서 클록 활성화 순서 점검이 필요합니다.'},
+  ],
+  review:[{me:true,text:'패치 리뷰 부탁'},{from:'review',text:'3건 지적사항: 락 해제 누락, 매직넘버 2개, 에러 경로 미처리.'}],
+  report:[{me:true,text:'이번 주 주간보고 정리해줘'},{from:'report',text:'드라이버/리뷰/디버깅 항목으로 초안 작성했습니다. 반영 완료.'}],
+  design:[{me:true,text:'드라이버 계층 분리안 보여줘'},{from:'design',text:'HAL ↔ core ↔ bus 3계층 분리안 초안 드릴게요.'}],
+};
+
+/* ── 스킬 데이터 (config 폴백 예시) ── */
+const SKILLS = {
+  driver:[['kbuild','커널 빌드/모듈'],['dts-edit','디바이스 트리'],['dma-debug','DMA 점검']],
+  design:[['arch-design','아키텍처 설계'],['api-spec','API 명세']],
+  impl:  [['code-impl','코드 구현'],['refactor','리팩터링']],
+  review:[['patch-review','패치 리뷰'],['checkpatch','스타일 검사']],
+  debug: [['kgdb','커널 디버그'],['ftrace','함수 트레이스'],['crash','크래시 분석']],
+  report:[['weekly-report','주간보고 작성'],['jira-sync','이슈 동기화']],
+  deck:  [['slide-gen','슬라이드 생성'],['diagram','다이어그램']],
+  leader:[['orchestrate','오케스트레이션'],['delegate','작업 위임']],
+};
+
+/* ── 칸반 데이터 ── */
+const LANES = ['Backlog','To Do','In Progress','Review','Done'];
+const TASKS = [
+  {t:'드라이버 API 문서화', d:'HAL 인터페이스 문서', lane:'Backlog'},
+  {t:'DTS 정리',          d:'compatible 정합성',   lane:'Backlog'},
+  {t:'드라이버 구현',      d:'probe/remove 경로',   lane:'To Do', who:'impl'},
+  {t:'패치 리뷰',          d:'지적 4건 처리 중',     lane:'In Progress', who:'review'},
+  {t:'주간보고 작성',      d:'드라이버 섹션 반영',   lane:'In Progress', who:'report'},
+  {t:'락 해제 패치',       d:'리뷰 대기',           lane:'Review', who:'driver'},
+  {t:'커널 빌드',          d:'CI 통과',             lane:'Done', who:'driver'},
+];
+
+/* ── 렌더링 ── */
+const $=s=>document.querySelector(s);
+let current='leader';
+
+function dotFor(id){return `<span class="dot ${AGENTS[id].presence}"></span>`}
+
+function renderRooms(){
+  $('#rooms').innerHTML = ROOMS.map(r=>{
+    const a=AGENTS[r.id];
+    return `<div class="room ${r.id===current?'active':''}" data-id="${r.id}">
+      <div class="ava">${a.emoji}${dotFor(r.id)}</div>
+      <div class="meta">
+        <div class="name"><span>${a.emoji?'':''}${a.name}${r.group?' <span class="grp">그룹방</span>':''}</span></div>
+        <div class="last">${r.last}</div>
+      </div></div>`;
+  }).join('');
+  document.querySelectorAll('.room').forEach(el=>el.onclick=()=>{current=el.dataset.id;renderRooms();renderChat();});
+}
+
+function renderChat(){
+  const a=AGENTS[current];
+  $('#chathead').innerHTML=`<div class="ava">${a.emoji}${dotFor(current)}</div>
+    <div><div class="h-name">${a.name}${ROOMS.find(r=>r.id===current)?.group?' (그룹방)':''}</div>
+    <div class="h-sub">${a.isLeader?'리더 · 위임 조율':'특화 에이전트'}</div></div>
+    <div class="status">${a.presence==='busy'?'● 작업중':a.presence==='online'?'● 온라인':'○ 유휴'}</div>`;
+  $('#msgs').innerHTML=(CONVOS[current]||[]).map(m=>{
+    if(m.delegate){const d=AGENTS[m.delegate];
+      return `<div class="turn bot"><div class="delegate"><div class="mini">${d.emoji}</div>
+        <span><b>${d.name}</b> ${m.status} </span>
+        <span class="typing"><span></span><span></span><span></span></span></div></div>`;}
+    if(m.me) return `<div class="turn me"><div class="bubble">${esc(m.text)}</div></div>`;
+    const d=AGENTS[m.from];
+    return `<div class="turn bot"><div class="sender">${d.emoji} ${d.name}</div>
+      <div class="bubble">${esc(m.text)}</div></div>`;
+  }).join('');
+  $('#msgs').scrollTop=$('#msgs').scrollHeight;
+}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}
+
+function renderSkills(){
+  $('#skillcols').innerHTML=Object.keys(SKILLS).map(id=>{
+    const a=AGENTS[id];
+    return `<div class="col"><div class="col-head">${a.emoji} ${a.name}<span class="cnt">${SKILLS[id].length}</span></div>
+      <div class="col-body">${SKILLS[id].map(s=>`<div class="card"><div class="t"><span class="tag skill">skill</span> ${s[0]}</div><div class="d">${s[1]}</div></div>`).join('')}</div></div>`;
+  }).join('');
+}
+
+function renderKanban(){
+  $('#kanbancols').innerHTML=LANES.map(lane=>{
+    const items=TASKS.filter(t=>t.lane===lane);
+    return `<div class="col"><div class="col-head">${lane}<span class="cnt">${items.length}</span></div>
+      <div class="col-body" data-lane="${lane}">${items.map(cardHTML).join('')}</div></div>`;
+  }).join('');
+  wireDnD();
+}
+function cardHTML(t){
+  const w=t.who?`<div class="who">${AGENTS[t.who].emoji} ${AGENTS[t.who].name} claim</div>`:'';
+  return `<div class="card" draggable="true" data-t="${t.t}"><div class="t">${t.t}</div><div class="d">${t.d}</div>${w}</div>`;
+}
+function wireDnD(){
+  let drag=null;
+  document.querySelectorAll('.kanban .card').forEach(c=>{
+    c.addEventListener('dragstart',()=>{drag=c;setTimeout(()=>c.style.opacity=.4)});
+    c.addEventListener('dragend',()=>{c.style.opacity=1});
+  });
+  document.querySelectorAll('.kanban .col-body').forEach(b=>{
+    b.addEventListener('dragover',e=>{e.preventDefault();b.classList.add('over')});
+    b.addEventListener('dragleave',()=>b.classList.remove('over'));
+    b.addEventListener('drop',e=>{e.preventDefault();b.classList.remove('over');
+      if(drag){const task=TASKS.find(t=>t.t===drag.dataset.t);task.lane=b.dataset.lane;renderKanban();}});
+  });
+}
+
+/* ── 뷰 전환 ── */
+document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');$('#view-'+b.dataset.view).classList.add('active');
+});
+
+renderRooms();renderChat();renderSkills();renderKanban();
+</script>
+</body>
+</html>

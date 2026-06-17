@@ -1,0 +1,15 @@
+# bkit
+.bkit/
+
+# secrets
+.env.local
+.env*.local
+
+# node / next (향후 스캐폴드 시)
+node_modules/
+.next/
+out/
+dist/
+
+# OS
+.DS_Store
