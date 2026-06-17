@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hermes Crew — UI 목업</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#161922; --panel2:#1c2030; --line:#262b3a;
+    --txt:#e6e9f0; --dim:#8a91a6; --accent:#5b8cff; --green:#3fb950;
+    --yellow:#d9a441; --gray:#5a6072; --bubble-me:#2a3550; --bubble-ag:#1f2433;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",
+    "Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden}
+  .app{display:flex;height:100vh}
+
+  /* ── 좌측 사이드바 ── */
+  .sidebar{width:248px;background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;flex-shrink:0}
+  .brand{padding:16px 18px;font-weight:700;font-size:16px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+  .brand small{margin-left:auto;color:var(--dim);font-weight:400;font-size:12px}
+  .seclabel{padding:14px 18px 6px;color:var(--dim);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .agents{flex:1;overflow:auto}
+  .agent{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;border-left:3px solid transparent}
+  .agent:hover{background:var(--panel2)}
+  .agent.active{background:var(--panel2);border-left-color:var(--accent)}
+  .agent .st{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .st.run{background:var(--green)} .st.idle{background:var(--yellow)} .st.stop{background:var(--gray)}
+  .agent .nm{flex:1}
+  .agent .nm b{display:block;font-weight:600}
+  .agent .nm span{color:var(--dim);font-size:12px}
+  .badge{background:var(--accent);color:#fff;font-size:11px;border-radius:10px;padding:1px 7px;font-weight:600}
+  .addbtn{padding:9px 18px;color:var(--dim);cursor:pointer}
+  .addbtn:hover{color:var(--txt)}
+  .sidefoot{padding:12px 14px;border-top:1px solid var(--line)}
+  .report-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:0;border-radius:8px;
+    font-weight:600;cursor:pointer;font-size:14px}
+  .report-btn:hover{filter:brightness(1.1)}
+
+  /* ── 중앙 ── */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .chead{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+  .chead h2{margin:0;font-size:15px}
+  .chead .tag{color:var(--dim);font-size:13px}
+  .viewtabs{margin-left:auto;display:flex;gap:6px}
+  .viewtabs button{background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+    border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px}
+  .viewtabs button.on{color:#fff;border-color:var(--accent);background:#212a44}
+
+  /* 채팅 뷰 */
+  .chat-view{flex:1;display:flex;flex-direction:column;min-height:0}
+  .msgs{flex:1;overflow:auto;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+  .row{display:flex;flex-direction:column;max-width:74%}
+  .row.me{align-self:flex-end;align-items:flex-end}
+  .who{font-size:12px;color:var(--dim);margin-bottom:4px}
+  .bubble{padding:10px 14px;border-radius:12px;background:var(--bubble-ag);white-space:pre-wrap}
+  .row.me .bubble{background:var(--bubble-me)}
+  .deleg{border:1px dashed var(--accent);border-radius:10px;padding:10px 12px;background:#141a2c;font-size:13px;color:var(--dim)}
+  .deleg b{color:var(--accent)}
+  .composer{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px}
+  .composer input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:11px 14px;color:var(--txt);font-size:14px}
+  .composer button{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:0 18px;font-weight:600;cursor:pointer}
+
+  /* 칸반(스킬 보드) 뷰 */
+  .kanban-view{flex:1;display:none;overflow:auto;padding:20px}
+  .kanban-view .hint{color:var(--dim);font-size:13px;margin:0 0 14px}
+  .board{display:flex;gap:14px;align-items:flex-start}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:200px;flex-shrink:0}
+  .col-h{padding:11px 14px;border-bottom:1px solid var(--line);font-weight:600;display:flex;align-items:center;gap:8px}
+  .col-h .st{width:9px;height:9px;border-radius:50%}
+  .col-h small{margin-left:auto;color:var(--dim);font-weight:400}
+  .col-b{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px}
+  .skill{padding:9px 11px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);
+    cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;user-select:none}
+  .skill .box{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--gray);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:10px}
+  .skill.on .box{background:var(--accent);border-color:var(--accent)}
+  .skill.off{color:var(--dim)}
+  .skill:hover{border-color:var(--accent)}
+
+  /* 모달 */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center}
+  .overlay.on{display:flex}
+  .modal{width:560px;max-width:92vw;max-height:82vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+  .mhead{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--panel)}
+  .mhead h3{margin:0;font-size:15px}
+  .mhead .actions{margin-left:auto;display:flex;gap:8px}
+  .mhead button{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .mbody{padding:18px 22px}
+  .mbody h4{margin:16px 0 6px;font-size:13px;color:var(--accent)}
+  .mbody h4:first-child{margin-top:0}
+  .mbody ul{margin:0;padding-left:18px}
+  .mbody li{margin:4px 0}
+  .mbody .src{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);color:var(--dim);font-size:12px}
+  .mbody .who-tag{color:var(--yellow);font-weight:600}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="dot"></span> Hermes Crew <small>🟢 5 agents</small></div>
+    <div class="seclabel">Agents</div>
+    <div class="agents" id="agents"></div>
+    <div class="addbtn">+ new agent</div>
+    <div class="sidefoot">
+      <button class="report-btn" onclick="openReport()">📋 주간보고 생성</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="chead">
+      <h2 id="ctitle"># driver</h2>
+      <span class="tag" id="ctag">· Linux Driver</span>
+      <div class="viewtabs">
+        <button id="tab-chat" class="on" onclick="switchView('chat')">💬 채팅</button>
+        <button id="tab-kanban" onclick="switchView('kanban')">🗂 스킬 보드</button>
+      </div>
+    </div>
+
+    <!-- 채팅 뷰 -->
+    <div class="chat-view" id="chatView">
+      <div class="msgs" id="msgs"></div>
+      <div class="composer">
+        <input id="inp" placeholder="메시지…" onkeydown="if(event.key==='Enter')send()" />
+        <button onclick="send()">전송</button>
+      </div>
+    </div>
+
+    <!-- 스킬 보드 뷰 -->
+    <div class="kanban-view" id="kanbanView">
+      <p class="hint">컬럼 = 직무 에이전트 · 카드 = 보유 스킬 · 클릭으로 on/off — 누가 무슨 능력을 가졌는지 한눈에</p>
+      <div class="board" id="board"></div>
+    </div>
+  </main>
+</div>
+
+<!-- 주간보고 모달 -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeReport()">
+  <div class="modal">
+    <div class="mhead">
+      <h3>📋 주간보고 · 2026-W25</h3>
+      <div class="actions">
+        <button onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('mbody').innerText)">복사</button>
+        <button onclick="closeReport()">닫기</button>
+      </div>
+    </div>
+    <div class="mbody" id="mbody">
+      <h4>이번 주 완료</h4>
+      <ul>
+        <li><span class="who-tag">[driver]</span> 드라이버 probe 경로 NULL deref 디버깅 · 재현/수정 완료</li>
+        <li><span class="who-tag">[reviewer]</span> 패치 3건 리뷰 (LGTM 2 / 보류 1)</li>
+        <li><span class="who-tag">[report]</span> 지난주 발표자료 초안 작성</li>
+      </ul>
+      <h4>진행 중</h4>
+      <ul><li><span class="who-tag">[architect]</span> 에이전트 모듈 구조 재설계 (인터페이스 분리)</li></ul>
+      <h4>Blocker</h4>
+      <ul><li><span class="who-tag">[driver]</span> 보드 리비전 대기 — HW팀 회신 필요</li></ul>
+      <div class="src">source: driver(12) · reviewer(7) · report(3) 세션 자동 집계</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const AGENTS = [
+  {id:'driver', name:'driver', role:'Linux Driver', st:'run', badge:0,
+   skills:[['kernel-dbg',1],['dmesg-scan',1],['gdb-trace',1],['patch-test',0]],
+   log:[['driver','probe() 진입 시 NULL deref 가 의심됩니다. 디바이스 노드 미초기화 경로로 보여요.'],
+        ['me','그 경로 콜스택 좀 떠줘 →'],['driver','확인 중… (실행 로그 첨부 예정)']]},
+  {id:'reviewer', name:'reviewer', role:'Patch Review', st:'run', badge:0,
+   skills:[['diff-review',1],['checklist',1],['style-lint',0]],
+   log:[['me','이 패치 리뷰 좀'],['reviewer','3개 중 2개 LGTM. 1개는 lock 범위가 넓어 보류 — 임계영역 밖으로 빼는 게 안전합니다.']]},
+  {id:'report', name:'report', role:'Weekly Report', st:'run', badge:2,
+   skills:[['weekly-rpt',1],['summarize',1],['slide-gen',1]],
+   log:[['report','이번 주 한 일 정리 초안 준비됐습니다. 좌측 "주간보고 생성" 눌러보세요.']]},
+  {id:'architect', name:'architect', role:'Code Design', st:'idle', badge:0,
+   skills:[['design-doc',1],['tradeoff',1],['uml-draw',0]],
+   log:[['architect','에이전트 모듈은 gateway / runtime / memory 3계층으로 가르는 걸 제안합니다.']]},
+  {id:'brainstorm', name:'brainstorm', role:'Brainstorm', st:'stop', badge:0,
+   skills:[['ideate',0],['mindmap',0]],
+   log:[['brainstorm','(중지됨) 깨우려면 메시지를 보내세요.']]},
+  {id:'lead', name:'lead', role:'Orchestrator', st:'run', badge:0,
+   skills:[['delegate_task',1],['aggregate',1]],
+   log:[['me','패치 리뷰랑 드라이버 점검 동시에 해줘'],
+        ['__deleg','<b>lead</b> 가 작업을 분배했습니다 → <b>reviewer</b>, <b>driver</b> (delegate_task)'],
+        ['lead','두 에이전트 결과를 취합했습니다:\n· reviewer: 패치 2 LGTM / 1 보류\n· driver: probe 경로 수정 완료\n통합하면 이번 패치셋은 보류 1건만 해결하면 머지 가능합니다.']]},
+];
+let cur='driver', view='chat';
+
+function renderAgents(){
+  const el=document.getElementById('agents'); el.innerHTML='';
+  AGENTS.forEach(a=>{
+    const d=document.createElement('div');
+    d.className='agent'+(a.id===cur?' active':''); d.onclick=()=>select(a.id);
+    d.innerHTML=`<span class="st ${a.st}"></span>
+      <span class="nm"><b>${a.name}</b><span>${a.role}</span></span>
+      ${a.badge?`<span class="badge">${a.badge}</span>`:''}`;
+    el.appendChild(d);
+  });
+}
+function renderMsgs(){
+  const a=AGENTS.find(x=>x.id===cur);
+  document.getElementById('ctitle').textContent='# '+a.name;
+  document.getElementById('ctag').textContent='· '+a.role;
+  const m=document.getElementById('msgs'); m.innerHTML='';
+  a.log.forEach(([who,txt])=>{
+    if(who==='__deleg'){const d=document.createElement('div');d.className='deleg';d.innerHTML='🔗 '+txt;m.appendChild(d);return;}
+    const row=document.createElement('div'); row.className='row'+(who==='me'?' me':'');
+    row.innerHTML=`<div class="who">${who==='me'?'나':who}</div><div class="bubble">${txt}</div>`;
+    m.appendChild(row);
+  });
+  m.scrollTop=m.scrollHeight;
+}
+function renderBoard(){
+  const b=document.getElementById('board'); b.innerHTML='';
+  AGENTS.filter(a=>a.st!=='stop'||a.skills.length).forEach(a=>{
+    const on=a.skills.filter(s=>s[1]).length;
+    const col=document.createElement('div'); col.className='col';
+    col.innerHTML=`<div class="col-h"><span class="st ${a.st}"></span>${a.name}<small>${on}/${a.skills.length}</small></div>`;
+    const body=document.createElement('div'); body.className='col-b';
+    a.skills.forEach((s,i)=>{
+      const sk=document.createElement('div'); sk.className='skill '+(s[1]?'on':'off');
+      sk.innerHTML=`<span class="box">${s[1]?'✓':''}</span>${s[0]}`;
+      sk.onclick=()=>{a.skills[i][1]=a.skills[i][1]?0:1; renderBoard();};
+      body.appendChild(sk);
+    });
+    col.appendChild(body); b.appendChild(col);
+  });
+}
+function select(id){const a=AGENTS.find(x=>x.id===id);if(a)a.badge=0;cur=id;renderAgents();renderMsgs();}
+function switchView(v){
+  view=v;
+  document.getElementById('chatView').style.display = v==='chat'?'flex':'none';
+  document.getElementById('kanbanView').style.display = v==='kanban'?'block':'none';
+  document.getElementById('tab-chat').classList.toggle('on',v==='chat');
+  document.getElementById('tab-kanban').classList.toggle('on',v==='kanban');
+  if(v==='kanban') renderBoard();
+}
+function send(){
+  const inp=document.getElementById('inp'); const t=inp.value.trim(); if(!t)return;
+  const a=AGENTS.find(x=>x.id===cur); a.log.push(['me',t]); inp.value=''; renderMsgs();
+  setTimeout(()=>{a.log.push([a.name,'(데모 응답) "'+t+'" 잘 받았습니다. 처리 중…']);renderMsgs();},500);
+}
+function openReport(){document.getElementById('overlay').classList.add('on');}
+function closeReport(){document.getElementById('overlay').classList.remove('on');}
+
+renderAgents(); renderMsgs();
+</script>
+</body>
+</html>

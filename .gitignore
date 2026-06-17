@@ -1,0 +1,32 @@
+# 환경·시크릿 (절대 커밋 금지)
+.env
+agents.config.json
+*.key
+*.token
+auth.json
+
+# Hermes 데이터
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / 프론트 (필요 시)
+node_modules/
+dist/
+build/
+*.log
+
+# 도구 상태
+.bkit/
+
+# 에디터
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

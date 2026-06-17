@@ -1,0 +1,10 @@
+{
+  "_comment": "이 파일을 agents.config.json 으로 복사 후, 사내에서 실제 생성한 프로필명과 포트로 채우세요. port 는 각 프로필 .env 의 API_SERVER_PORT 와 일치해야 합니다.",
+  "agents": [
+    { "profile": "driver",    "port": 8642, "label": "Driver",    "role": "리눅스 드라이버 설계·구현·디버깅" },
+    { "profile": "reviewer",  "port": 8643, "label": "Reviewer",  "role": "패치 리뷰" },
+    { "profile": "report",    "port": 8644, "label": "Report",    "role": "주간보고·발표자료" },
+    { "profile": "architect", "port": 8645, "label": "Architect", "role": "코드 설계" },
+    { "profile": "lead",      "port": 8646, "label": "Lead",      "role": "오케스트레이터 (delegate_task)" }
+  ]
+}
