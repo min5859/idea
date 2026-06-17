@@ -39,7 +39,7 @@ SSH 터미널에 갇힌 1인용 Hermes 를, **사내망 웹에서 여러 직무 
   - API 로 호출해도 hermes 의 **memory / skills / tool 실행은 그대로 유지** (단순 chat completion 아님).
 - **멀티 에이전트 = 프로필별 포트 (수동 매핑, 자동발견 아님).** 포트 동적 레지스트리는 **없다** — 각 프로필 `.env` 에 `API_SERVER_PORT` 를 수동 지정하고, 프론트는 `agents.config.json` 의 프로필↔포트 매핑으로 endpoint 를 안다 (`/v1/models` 는 그 포트의 단일 프로필만 광고). 프론트는 매핑된 endpoint 들을 **병렬 호출** → 동시 독립 멀티채팅.
 - **세션/메모리.** Chat Completions 는 **stateless** — 멀티턴은 프론트가 `messages` 배열을 **누적 전송**한다. 장기 메모리 연속은 헤더 `X-Hermes-Session-Key: <프로필명>` 고정으로 얻는다 (프로필별 독립).
-- **메타데이터 = hermes CLI 보강.** OpenAI API 에 없는 정보는 백엔드 래퍼가 CLI 로 조회: 스킬 `hermes -p <p> skills list`, 상태 `hermes -p <p> gateway status`(또는 `:port/health`), 작업 `kanban.db`(스키마 미상 → 스트레치). 스킬 on/off 는 `hermes -p <p> skills config` / `tools enable|disable` — **변경은 다음 세션(/reset)부터 적용**(즉시 아님)이므로 UI 에 표기.
+- **메타데이터 = hermes CLI 보강.** OpenAI API 에 없는 정보는 백엔드 래퍼가 CLI 로 조회: 스킬 `hermes -p <p> skills list`, 상태 `hermes -p <p> gateway status`(또는 `:port/health`), 작업 `kanban.db`(스키마 미상 → 스트레치), **주간보고 입력** `hermes -p <p> sessions export`(JSONL · 세션 ID `YYYYMMDD` prefix 로 주 단위 슬라이싱). 스킬 on/off 는 `hermes -p <p> skills config` / `tools enable|disable` — **변경은 다음 세션(/reset)부터 적용**(즉시 아님)이므로 UI 에 표기.
 - **오케스트레이션 = hermes 네이티브(단, API 경유 트리거는 당일 검증).** 리더 프로필에 요청하면 내부 `delegate_task`(role=orchestrator/leaf)로 하위 호출·취합하는 게 설계 의도. **다만 API(orchestrator 프로필 호출) 경유 위임이 실제 작동하는지는 공식 문서에 미명시 → 당일 검증 필요.** 중간 과정은 스트리밍 커스텀 이벤트 `hermes.tool.progress` 로 delegation 카드를 그릴 수 있다. 안 되면 결과만, 또는 발표 언급만 (스트레치).
 - **접속**: 브라우저 → 사내 LAN → 프론트(+백엔드 래퍼) → 각 프로필 API(:8642+). non-loopback 바인딩은 `API_SERVER_KEY` 인증 필수.
 - 함의: 채팅이 표준 API 라 **자체 프론트 신규 구현이 fork 보다 빠르고 깔끔**. `mockup.html` 을 키우면 된다.

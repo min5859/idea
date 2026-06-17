@@ -9,6 +9,7 @@
 - **kanban.db 스키마**: 경로는 `~/.hermes/profiles/<name>/kanban.db` 로 추정되나 테이블 구조 미상 → 작업(task) 보드는 스트레치.
 - **스킬/툴 on/off 반영 시점**: `hermes skills config` / `hermes tools enable|disable` 변경은 **다음 세션(/reset)부터 적용**(mid-conversation 즉시 반영 아님). UI 에 반드시 표기.
 - **CORS**: API 서버는 조건부 CORS (`API_SERVER_CORS_ORIGINS`). 기본 차단 → **백엔드 프록시(server-to-server)로 우회**하는 게 기본 설계. 프론트 직접 호출은 데모 한정 폴백.
+- **세션 export 의 프로필 스코핑·날짜 필터**: 주간보고 입력원은 `hermes -p <profile> sessions export`(JSONL) 다(§7). `-p` 가 프로필별 `state.db` 로 정확히 스코핑되는지, 이번 주 필터를 세션 ID(`YYYYMMDD` prefix)로 거는 방식이 맞는지 당일 확인. (`sessions list` 에 `--since` 없음 → ID prefix 로 클라이언트 측 필터)
 
 ## 1. 프로젝트 구조
 
@@ -63,7 +64,7 @@ hermes-crew/
 | `POST /api/chat/{profile}` | 해당 프로필 `/v1/chat/completions` 로 **프록시**(키 주입, SSE 패스스루). body=`{messages}` |
 | `GET /api/agents/{profile}/skills` | `hermes -p <profile> skills list` + `tools list` 파싱 → `[{name, enabled}]` |
 | `POST /api/agents/{profile}/skills/{name}/toggle` | `hermes -p <profile> skills config …` (⚠️ 다음 세션 적용) |
-| `POST /api/report` | report(또는 lead) 프로필에 고정 프롬프트 호출 → 마크다운 주간보고 반환 |
+| `POST /api/report` | 각 프로필 `sessions export`(이번 주 필터) 집계 → report(또는 lead) 프로필에 고정 프롬프트 → 마크다운 주간보고 반환 (§7) |
 | `GET /` (정적) | `frontend/` 서빙 |
 
 - **API 키는 백엔드 `.env` 에만.** 프론트로 절대 내려보내지 않는다.
@@ -88,9 +89,15 @@ hermes -p report   gateway &
 
 ## 7. 주간보고 (`POST /api/report`)
 
-- report(또는 lead) 프로필에 고정 프롬프트:
+- **입력원 = 프로필별 세션 export(권장).** Hermes 는 프로필별 `state.db`(`~/.hermes/profiles/<name>/`, SQLite)에 전체 대화(메시지·role·tool call·타임스탬프)를 저장한다. 세션 ID 가 `YYYYMMDD_HHMMSS_<hex>` 포맷이라 **날짜로 슬라이싱**되고, 웹 UI 채팅도 API 서버 경유라 세션으로 적재된다. → report 프로필이 남의 메모리를 못 읽는 문제를 백엔드 집계로 우회한다.
+- 집계 절차(백엔드):
+  1. 각 프로필 `hermes -p <profile> sessions list --limit N` → 이번 주(세션 ID 의 `YYYYMMDD` prefix)만 필터.
+  2. `hermes -p <profile> sessions export <tmp>.jsonl`(개별은 `--session-id`) → JSONL 읽어 파싱.
+  3. 전 프로필 transcript 를 합쳐 report(또는 lead) 프로필에 고정 프롬프트로 1회 호출.
+- 고정 프롬프트:
   > "각 직무 에이전트의 이번 주 작업을 **완료 / 진행 중 / Blocker** 로 분류해 마크다운 주간보고로 작성하라. 각 항목 앞에 `[프로필명]` 표기."
-- 입력원: 각 프로필이 `X-Hermes-Session-Key` 로 누적한 **메모리**. 부족하면 폴백 = 세션 로그 수동 첨부.
+- ⚠️ `sessions export` 는 stdout 이 아니라 **파일(JSONL)** 출력 → temp 파일 경유 후 파싱. `-p` 스코핑·날짜 필터는 §0 당일 검증.
+- 폴백: export 가 막히면 세션 로그 수동 첨부 요약.
 
 ## 8. 스킬 보드 데이터
 
