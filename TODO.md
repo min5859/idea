@@ -26,7 +26,7 @@
 - [ ] 백엔드 래퍼(필수, `SPEC.md` §5 계약): `POST /api/chat/{profile}` 프록시(키 주입·SSE 패스스루) + `GET /api/agents`. 키는 백엔드에만.
 - [ ] `mockup.html` → `frontend/`: `send()` 를 `/api/chat/{profile}` 호출 + **SSE 파싱**(delta 누적)으로 교체. `messages` 누적 + `X-Hermes-Session-Key` 적용
 - [ ] 사이드바 목록·상태를 `GET /api/agents` 결과로 채우기 (하드코딩 → 실데이터)
-- [ ] 프로필별 대화 **세션 분리** (독립 messages 배열·독립 대화창)
+- [ ] 프로필별 대화 **세션 분리** (독립 messages 배열) + **백그라운드 스트리밍**(전환해도 응답 계속 수신·안읽음 배지) — "동시" 주장을 뒷받침. 분할 동시 뷰는 안 함(과장 금지)
 - 폴백: 백엔드 래퍼가 막히면 → 프론트 직접 호출(데모 한정, 키 노출 감수) + 상태 수동 표기. (CORS 필요 시 서버 `API_SERVER_CORS_ORIGINS` 설정)
 
 ## Phase 3 — 주간보고 자동 생성 (Day 2 오전, ~2h) ⭐ 킬러 기능
