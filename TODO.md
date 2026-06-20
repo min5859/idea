@@ -1,74 +1,67 @@
-# HermesTalk — 해커톤 TODO (1일 MVP)
+# HermesTalk — TODO (실사용 개인 도구)
 
-목표: 데모 핵심 — ①채팅방+presence ②1:1 SSE 스트리밍 ③그룹방 위임 시각화 (+ ④스킬 보드 ⑤작업 칸반).
-원칙: **mock 먼저 끝까지 → real 연동 → 안정화.** 막히면 즉시 보고하고 mock으로 데모 보장.
-순위: 메신저 3기능(①②③)이 1순위. 보드(④⑤)는 그 다음. 칸반 write-back 실연동은 맨 마지막.
+목표: **Hermes Studio를 포크**해서, 집/회사 PC에서 실제로 쓰는 멀티에이전트 메신저로 만든다.
+원칙: **real-first(mock 없음) · 최소 침습(Studio 레이어로 얹기) · 막히면 보고.**
+핵심 순위: ①PC별 에이전트 자동표시 → ②1:1 real 스트리밍 → ③그룹방 위임 → ④네이티브 칸반.
 
----
-
-## Phase 0 — Hermes API 검증 (착수 전 필수, ~30분)
-- [ ] real로 띄울 프로필 1~2개 선정(예: 디버그봇). **프로필=게이트웨이=포트**라 다 띄울 필요 없음
-- [ ] 그 프로필 게이트웨이를 `API_SERVER_ENABLED=true`+`API_SERVER_KEY`로 기동, baseUrl을 `config/agents.ts`에 기입
-- [ ] `POST /v1/runs` → `run_id` → `GET /v1/runs/{run_id}/events`(SSE) 토큰+위임 이벤트 형태 확인
-- [ ] `GET /v1/skills` 응답 형태 확인 (스킬 보드 real 소스)
-- [ ] (확정 사실) Kanban HTTP API 없음 → 칸반은 로컬 store 전용. `model` 필드는 장식용(프로필 선택 불가)
-- [ ] ❗막히면: real 보류, mock/로컬로 UI 완성 후 재시도
-
-## Phase 1 — 프로젝트 셋업 (~30분)
-- [ ] ⚠️ 폴더에 이미 파일들(CLAUDE.md, config/, lib/, mockup.html…)이 있어 `create-next-app .`이 "디렉터리 비어있지 않음"으로 거부됨 → **임시 폴더에 스캐폴드 후 생성물을 현재 폴더로 병합**(기존 config/·lib/·*.md·mockup.html·.env.example 유지). `tsconfig.json`의 `@/*` 별칭이 루트를 가리키게(`src/` 미사용) 확인
-- [ ] `create-next-app` (TS + Tailwind + App Router)
-- [ ] zustand 설치, 기본 폴더 구조 생성
-- [ ] `config/agents.ts` 에 8개 에이전트 정의
-- [ ] `config/skills.ts` 에 에이전트별 skill 목록(폴백) 정의
-- [ ] `NavRail` — 좌측 레일(💬 채팅 / 🗂 스킬 / 📋 칸반) + 뷰 전환
-- [ ] `HERMES_MODE` 환경변수 처리 (기본 mock)
-
-## Phase 2 — Hermes 어댑터 (~1시간)
-- [ ] `lib/hermes/adapter.ts` 인터페이스 + 이벤트 타입 정의
-- [ ] `lib/hermes/mock.ts` — 토큰/위임/done 이벤트 모의 스트리밍 (데모 안전망)
-- [ ] `api/chat/[agentId]/route.ts` — POST → 어댑터 → SSE 응답
-- [ ] `api/agents/route.ts` — 레지스트리 + presence 반환
-
-## Phase 3 — 메신저 UI (~2시간)
-- [ ] `ChatList` — 채팅방 목록 + presence 뱃지 (성공 기준 ①)
-- [ ] `ChatView` — 말풍선 + 입력창 + `fetch`+`ReadableStream` SSE 스트리밍 (성공 기준 ②)
-- [ ] 보낸/받은 말풍선 스타일, 자동 스크롤, "입력 중…" 인디케이터
-
-## Phase 4 — 그룹방 오케스트레이션 (~1.5시간) ★데모 하이라이트
-- [ ] 그룹방 라우팅 (리더 에이전트로 전송)
-- [ ] `DelegationBubble` — `delegation` 이벤트 → 서브에이전트 아바타 + 상태 말풍선
-- [ ] 위임 진행 → 결과 → 리더 취합 흐름 렌더 (성공 기준 ③)
-- [ ] mock에서 리뷰봇→주간보고봇 위임 시나리오 하드코딩(데모 재현용)
-
-## Phase 5 — 스킬 보드 & 작업 칸반 (~2시간)
-- [ ] `api/skills/route.ts` — API 우선, 없으면 `config/skills.ts` 반환
-- [ ] `SkillBoard` — 열=에이전트, 카드=skill (read-only) (성공 기준 ④)
-- [ ] `lib/store/tasks.ts` (zustand) + `api/tasks/route.ts`
-- [ ] `KanbanBoard` — 5레인 + 드래그 이동 + 에이전트 claim (성공 기준 ⑤)
-- [ ] 그룹방 위임 → 칸반 카드 자동 생성·claim (같은 store 공유)
-
-## Phase 6 — real 연동 & 안정화 (~1시간)
-- [ ] `lib/hermes/real.ts` 채우기 (Phase 0 결과 기반)
-- [ ] `HERMES_MODE=real` 로 1:1 동작 확인
-- [ ] 그룹방 위임 real 동작 확인 (안 되면 mock 유지, 1:1만 real)
-- [ ] (Nice) real 에이전트 1~2개로 1:1 + 스킬보드(`/v1/skills`) 실연동 확인
-- [ ] 데모 시나리오 3회 리허설, 깨지는 지점 수정
-
-## Phase 7 — 발표 준비 (~30분)
-- [ ] `기획안.md` 기반 슬라이드/말하기 흐름 정리
-- [ ] 데모 환경 고정(브라우저 탭, 창 크기, 폰트)
-- [ ] 백업: mock 모드로도 데모 가능한지 최종 확인
+> 자세한 결정·근거·코드 위치는 `CLAUDE.md` 참조.
 
 ---
 
-## 시간이 부족하면 버리는 순서
-1. 스킬 보드 `/v1/skills` 연동 (config 하드코딩으로 데모)
-2. 토큰/큐 미니 대시보드
-3. real 그룹방 (1:1만 real, 그룹방은 mock 데모)
-→ **절대 못 버리는 것: 채팅방 목록 + 1:1 스트리밍 + 그룹방 위임 시각화(mock 포함)**
+## Phase 0 — Hermes 환경 + 사실 검증 (착수 전 필수)
+- [ ] 실사용 프로필 선정(예: 드라이버봇·디버그봇·리뷰봇·팀리더봇). **N개 = 게이트웨이 N개** 인지
+- [ ] 각 프로필 게이트웨이를 `API_SERVER_ENABLED=true` + `API_SERVER_KEY`로 기동, 포트 정리(8642, 8643…)
+- [ ] `<프로필> gateway install`로 부팅 시 자동 기동 등록(systemd/launchd) 확인
+- [ ] 텔레그램: 프로필별 봇 토큰 발급(BotFather) + `.env` 기입, 1:1 DM 동작 확인 (웹과 세션 공유되는지)
+- [ ] `POST /v1/runs` → `GET /v1/runs/{id}/events` SSE로 **delegate_task 위임(lifecycle) 이벤트**가 실제로 오는지 raw 확인
+- [ ] 네이티브 칸반 `/api/plugins/kanban/` 응답 형태 확인 (읽기/생성/이동) — Phase 5 전환의 근거
+- [ ] `delegate_task` 동작 확인: `config.yaml`에 `max_concurrent_children`/`max_spawn_depth`/`orchestrator_enabled`
+
+## Phase 1 — Studio 포크 셋업
+- [ ] `JPeetz/Hermes-Studio` 포크 + 클론, `npm install`, `HERMES_API_URL`/`HERMES_API_TOKEN` 설정 후 `npm run dev` 기동
+- [ ] 우리 Hermes 게이트웨이에 붙여 1:1 채팅·세션·스킬·칸반(자체) 기본 동작 확인
+- [ ] 포크 운영 방침 결정: 업스트림 추적 브랜치 + 우리 변경은 별도 커밋/레이어로(머지 충돌 최소화)
+- [ ] 이 repo의 from-scratch 잔재(`config/agents.ts`, `app/`, `.env.example`) 정리/보관(코드 정본은 포크)
+
+## Phase 2 — PC별 에이전트 자동 표시 (요구 2)
+- [ ] 후보 게이트웨이 목록을 PC 로컬 설정(`.env`/config)으로: 포트/baseUrl 나열
+- [ ] `gateway-capabilities.probeGateway()`로 살아있는 게이트웨이만 감지 → "채팅방=에이전트" 목록 생성
+- [ ] `chat-sidebar.tsx`에 presence 뱃지(온라인/유휴/오프라인) 연결
+- [ ] 집/회사 PC에서 각각 다른 에이전트가 뜨는지 확인
+
+## Phase 3 — 1:1 메신저 UX (요구 3·4 일부)
+- [ ] 채팅방(에이전트) 관점으로 사이드바 정리 + unread 카운트
+- [ ] 1:1 real 스트리밍 동작 확인(Studio 기본 흐름 활용), 텔레그램↔웹 세션 연속성 확인
+- [ ] 메시지 검색(`search-modal.tsx`) 메시지 대상으로 확장
+
+## Phase 4 — 그룹방 위임 (요구 5, 방식 A) ★하이라이트
+- [ ] `/chat/$sessionKey`에 group 세션 타입 추가 → 리더 프로필로 라우팅
+- [ ] `delegate_task` 위임 이벤트(`/v1/runs/{id}/events`)를 `message-item.tsx` 카드 → **위임 말풍선** 스타일로
+- [ ] @mention으로 특정 서브봇 지목(`chat-composer.tsx`)
+- [ ] 리더 위임 → 서브봇 진행 → 취합 흐름이 한 화면에 시간순으로 보이는지 확인
+
+## Phase 5 — 네이티브 칸반 전환 (요구 4, 방식 B) [결정 ①]
+- [ ] (Phase 1) Studio 자체 보드 그대로 사용 중 → 여기서 데이터 레이어 스왑
+- [ ] `task-store.ts`/`tasks-api.ts`를 `/api/plugins/kanban/` 프록시로 교체(UI 유지)
+- [ ] 그룹방 위임 작업이 네이티브 칸반에 생성되고 담당 봇이 claim → 두 PC/텔레그램에서 같은 보드 확인
+- [ ] (Nice) `/v1/skills`로 스킬 보드 실데이터 확인
+
+## Phase 6 — 실사용 안정화
+- [ ] 인증(WebAuthn/패스워드) — 원격/멀티PC 접속 대비 (webui 아이디어)
+- [ ] Docker Compose `restart: unless-stopped`로 게이트웨이+Studio 상시 가동
+- [ ] 집/회사 양쪽에서 1주일 실사용 → 깨지는 지점 수정
+- [ ] 업스트림(Studio) 변경 주기적 머지 절차 점검
+
+---
+
+## 슬랙 벤치마크 — 적용 우선순위
+1. @mention 라우팅(그룹방 봇 지목) — Phase 4
+2. unread 뱃지/알림(텔레그램 알림과 중복 조율) — Phase 3
+3. 메시지 검색 — Phase 3
+4. (후순위) pin/star, 슬래시 커맨드(자주 쓰는 프롬프트)
 
 ## 리스크
-- 프로필=포트라 real 멀티에이전트는 게이트웨이 여러 개 필요 → real은 1~2개만, 나머지 mock으로 데모.
-- 위임 이벤트(`/v1/runs/.../events`) 형태가 예상과 다르면 → 그룹방은 mock 데모로 차별점만 보여주고 "real은 로드맵" 처리.
-- 스코프 팽창(보드 2종 추가) → 메신저 3기능 먼저 완성 후 보드 착수. 보드 때문에 메신저가 미완되면 안 됨.
-- Kanban API 없음(확정) → 칸반은 로컬 store 전용으로 데모 완결.
+- N에이전트=N게이트웨이 운영 부담 → 자주 쓰는 것만 + 자동 기동으로 완화.
+- 포크 업스트림 드리프트 → 변경을 레이어/별도 커밋으로 최소 침습, 주기적 머지.
+- 네이티브 칸반 API 형태가 예상과 다르면 → Phase 5 전환 보류, Studio 자체 보드 유지(요구 충족은 1순위 아님).
+- delegate_task 이벤트 형태가 다르면 → 위임 시각화는 Studio Conductor 흐름을 참고해 조정.
