@@ -21,7 +21,7 @@
 | 그룹방 | 새 컴포넌트 | **Studio chat 화면 확장**(Conductor는 보조 관제 뷰) |
 | 외부 연동 | 없음 | **텔레그램 + 웹 동시**(둘 다 같은 게이트웨이 클라이언트) |
 
-> ⚠️ 기존 루트의 `config/agents.ts`, `.env.example`, `app/` 기반 구조, `mockup.html`은 **from-scratch Next.js 계획의 잔재**다. mockup.html은 이제 "메신저 UX 레이어"의 디자인 참고용으로만 본다(정본 아님). 실제 코드 정본은 포크한 Studio 코드베이스다.
+> ⚠️ from-scratch Next.js 계획의 잔재 코드는 `legacy/`로 이동 보관했다(`agents.ts`·`skills.ts`·`types.ts`, 미사용). `mockup.html`은 이제 "메신저 UX 레이어"의 디자인 타깃으로만 본다(정본 아님). 실제 코드 정본은 포크한 Studio 코드베이스다.
 
 ## 1. 목표 (성공 기준 = 실제로 매일 쓸 수 있는가)
 

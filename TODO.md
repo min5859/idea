@@ -21,7 +21,8 @@
 - [ ] `JPeetz/Hermes-Studio` 포크 + 클론, `npm install`, `HERMES_API_URL`/`HERMES_API_TOKEN` 설정 후 `npm run dev` 기동
 - [ ] 우리 Hermes 게이트웨이에 붙여 1:1 채팅·세션·스킬·칸반(자체) 기본 동작 확인
 - [ ] 포크 운영 방침 결정: 업스트림 추적 브랜치 + 우리 변경은 별도 커밋/레이어로(머지 충돌 최소화)
-- [ ] 이 repo의 from-scratch 잔재(`config/agents.ts`, `app/`, `.env.example`) 정리/보관(코드 정본은 포크)
+- [x] from-scratch 잔재 코드 `legacy/`로 이동 보관 완료(`agents.ts`·`skills.ts`·`types.ts`, 코드 정본은 포크라 미사용)
+- [ ] **mockup.html 재작도 결정**: 지금은 "메신저 UX 레이어 디자인 타깃"으로 역할만 재정의 + 틀린 사실 수정 완료. 전면 재작도는 **포크를 띄워 Studio 실제 화면을 본 뒤**, 그 위에 얹을 부분(채팅방=에이전트·presence·위임 말풍선·@mention)만 Studio 화면 기준으로 다시 그린다 (지금 추측으로 전면 재작도하지 않음)
 
 ## Phase 2 — PC별 에이전트 자동 표시 (요구 2)
 - [ ] 후보 게이트웨이 목록을 PC 로컬 설정(`.env`/config)으로: 포트/baseUrl 나열

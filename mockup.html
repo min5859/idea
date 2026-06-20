@@ -3,7 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HermesTalk — 목업</title>
+<title>HermesTalk — 메신저 UX 레이어 디자인 타깃</title>
+<!--
+  ⚠️ 역할 변경(해커톤 종료 후): 이 목업은 "0부터 만들 앱의 정본"이 아니다.
+  실제 앱은 Hermes Studio 포크가 베이스이고, 이 파일은 그 위에 얹을
+  ★메신저 UX 레이어(채팅방=에이전트 목록 · presence · 그룹방 위임 말풍선 · @mention)★
+  의 디자인 타깃이다. 아래 중 Studio가 이미 제공/대체하는 부분:
+    - 좌측 3뷰 네비레일(채팅/스킬/칸반) → Studio workspace-shell 이 대체
+    - 🗂 스킬 보드        → Studio 화면 + /v1/skills
+    - 📋 칸반            → Studio 칸반 UI(데이터는 Hermes 네이티브 /api/plugins/kanban/ 로 전환)
+  우리가 새로 얹는 핵심 = 아래 "채팅 뷰" 의 룩앤필(특히 위임 말풍선).
+  에이전트 목록은 하드코딩이 아니라 실제로는 PC별 게이트웨이 자동 감지(probeGateway) 결과다.
+  정본 지침: CLAUDE.md / 단계: TODO.md
+-->
+
 <style>
   :root{
     --rail:#1f2430; --rail-active:#3b82f6; --sidebar:#f4f5f7; --bg:#ffffff;
@@ -140,7 +153,7 @@
   <div class="board">
     <div class="board-head">
       <h2>📋 작업 칸반</h2>
-      <p>그룹방에서 위임된 작업이 카드로 생성되어 레인을 따라 이동. 카드를 드래그해 옮겨 보세요. (로컬 store 전용 — Hermes API 서버엔 Kanban 엔드포인트가 없음)</p>
+      <p>그룹방에서 위임된 작업이 카드로 생성되어 레인을 따라 이동. 카드를 드래그해 옮겨 보세요. (Hermes 네이티브 칸반 /api/plugins/kanban/ 연결 — 봇이 claim, 두 PC·텔레그램이 같은 보드 공유)</p>
     </div>
     <div class="cols kanban" id="kanbancols"></div>
   </div>
