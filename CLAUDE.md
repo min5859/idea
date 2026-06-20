@@ -10,7 +10,7 @@
 
 ## 0. 핵심 방향 (이전 해커톤 계획과 무엇이 바뀌었나)
 
-이 프로젝트는 **0에서 Next.js로 만들지 않는다.** **Hermes Studio(`JPeetz/Hermes-Studio`, MIT)를 포크**해서, 거기에 **메신저 UX 레이어**만 얹는다. 이유: Studio가 우리가 만들려던 것의 ~90%(게이트웨이 capability 자동 감지, `/v1/runs` 위임 이벤트 스트리밍, tool 카드, 세션관리, 칸반 UI, cron, approvals)를 이미 구현했고, 개인 도구엔 "차별점"보다 **유지보수 부담 최소화**가 중요하기 때문.
+이 프로젝트는 **0에서 Next.js로 만들지 않는다.** **Hermes Studio(`JPeetz/Hermes-Studio`, MIT)를 포크**해서, 거기에 **메신저 UX 레이어**만 얹는다. (포크 본체 = **`app/`**, 실행법은 `app/HERMESTALK-FORK.md`. 루트는 기획·지침 문서.) 이유: Studio가 우리가 만들려던 것의 ~90%(게이트웨이 capability 자동 감지, `/v1/runs` 위임 이벤트 스트리밍, tool 카드, 세션관리, 칸반 UI, cron, approvals)를 이미 구현했고, 개인 도구엔 "차별점"보다 **유지보수 부담 최소화**가 중요하기 때문.
 
 | 항목 | 이전(해커톤) | 지금(실사용) |
 |---|---|---|

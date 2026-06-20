@@ -17,10 +17,11 @@
 - [x] 네이티브 칸반: 프로필별 `kanban.db` + `hermes kanban` CLI 확인. REST는 dashboard(:9119) `/api/plugins/kanban/`
 - [ ] (Phase 1 이후) 텔레그램↔웹 세션 공유, 위임 이벤트 raw 캡처는 실제 채팅 시 확인
 
-## Phase 1 — Studio 포크 셋업
-- [ ] `JPeetz/Hermes-Studio` 포크 + 클론, `npm install`, `HERMES_API_URL`/`HERMES_API_TOKEN` 설정 후 `npm run dev` 기동
-- [ ] 우리 Hermes 게이트웨이에 붙여 1:1 채팅·세션·스킬·칸반(자체) 기본 동작 확인
-- [ ] 포크 운영 방침 결정: 업스트림 추적 브랜치 + 우리 변경은 별도 커밋/레이어로(머지 충돌 최소화)
+## Phase 1 — Studio 포크 셋업 ✅ 대체로 완료
+- [x] `JPeetz/Hermes-Studio` v1.20.0 클론 → `app/`에 포크로 들임(LICENSE 유지). pnpm 설치 + 네이티브 빌드(allowBuilds)
+- [x] 게이트웨이 연결 확인: `pnpm dev`(:3000) → `/api/connection-status` ok, `/api/gateway-status` capability 자동 감지(chat·models·streaming·jobs=true)
+- [x] 실행/포크 안내: `app/HERMESTALK-FORK.md`
+- [ ] 포크 운영 방침: 업스트림 추적 + 우리 변경 별도 커밋(머지 최소 침습) — 진행 중 원칙으로 유지
 - [x] from-scratch 잔재 코드 `legacy/`로 이동 보관 완료(`agents.ts`·`skills.ts`·`types.ts`, 코드 정본은 포크라 미사용)
 - [ ] **mockup.html 재작도 결정**: 지금은 "메신저 UX 레이어 디자인 타깃"으로 역할만 재정의 + 틀린 사실 수정 완료. 전면 재작도는 **포크를 띄워 Studio 실제 화면을 본 뒤**, 그 위에 얹을 부분(채팅방=에이전트·presence·위임 말풍선·@mention)만 Studio 화면 기준으로 다시 그린다 (지금 추측으로 전면 재작도하지 않음)
 
