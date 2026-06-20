@@ -8,14 +8,14 @@
 
 ---
 
-## Phase 0 — Hermes 환경 + 사실 검증 (착수 전 필수)
-- [ ] 실사용 프로필 선정(예: 드라이버봇·디버그봇·리뷰봇·팀리더봇). **N개 = 게이트웨이 N개** 인지
-- [ ] 각 프로필 게이트웨이를 `API_SERVER_ENABLED=true` + `API_SERVER_KEY`로 기동, 포트 정리(8642, 8643…)
-- [ ] `<프로필> gateway install`로 부팅 시 자동 기동 등록(systemd/launchd) 확인
-- [ ] 텔레그램: 프로필별 봇 토큰 발급(BotFather) + `.env` 기입, 1:1 DM 동작 확인 (웹과 세션 공유되는지)
-- [ ] `POST /v1/runs` → `GET /v1/runs/{id}/events` SSE로 **delegate_task 위임(lifecycle) 이벤트**가 실제로 오는지 raw 확인
-- [ ] 네이티브 칸반 `/api/plugins/kanban/` 응답 형태 확인 (읽기/생성/이동) — Phase 5 전환의 근거
-- [ ] `delegate_task` 동작 확인: `config.yaml`에 `max_concurrent_children`/`max_spawn_depth`/`orchestrator_enabled`
+## Phase 0 — Hermes 환경 + 사실 검증 ✅ 완료 (결과: `PHASE0-VERIFICATION.md`)
+- [x] 현재 프로필 = `maccoder` 1개(launchd 상시 가동). 텔레그램 동작 중
+- [x] api_server 활성화: **프로필** `.env`에 `API_SERVER_ENABLED=true` → `hermes --profile maccoder gateway restart` → `:8642` 동작(2 platforms), `/v1/models` 실호출 확인
+- [x] `<프로필> gateway` = launchd 서비스로 부팅 자동 기동 확인됨
+- [x] `/v1/runs` 계열 SSE 엔드포인트 + 위임 모델 확인: **`delegate_task`는 function_call 아이템**으로 옴(별도 이벤트 없음)
+- [x] `orchestrator_enabled: true` 확인 → delegate_task 사용 가능
+- [x] 네이티브 칸반: 프로필별 `kanban.db` + `hermes kanban` CLI 확인. REST는 dashboard(:9119) `/api/plugins/kanban/`
+- [ ] (Phase 1 이후) 텔레그램↔웹 세션 공유, 위임 이벤트 raw 캡처는 실제 채팅 시 확인
 
 ## Phase 1 — Studio 포크 셋업
 - [ ] `JPeetz/Hermes-Studio` 포크 + 클론, `npm install`, `HERMES_API_URL`/`HERMES_API_TOKEN` 설정 후 `npm run dev` 기동

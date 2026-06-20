@@ -52,9 +52,12 @@
 - 현실적 운영: 그날 쓸 2~3개만 띄움 + `<프로필> gateway install`로 부팅 시 systemd/launchd 자동 기동.
 - **그래서 "PC별 자동 표시"가 자연스럽다** — 그 PC에 떠 있는 게이트웨이만 probe에 잡힌다.
 
-## 4. Hermes 게이트웨이 연동 (사실, Studio 코드로 확인)
+## 4. Hermes 게이트웨이 연동 (✅ Phase 0 실측 완료 — `PHASE0-VERIFICATION.md`)
 
-- 활성화: Hermes `.env`에 `API_SERVER_ENABLED=true`, `API_SERVER_KEY=<key>`. 베이스 `http://<host>:8642/v1`, 인증 `Authorization: Bearer <key>`.
+- **활성화 (실측)**: **프로필 전용** `~/.hermes/profiles/<프로필>/.env`에 `API_SERVER_ENABLED=true` (글로벌 `~/.hermes/.env` 아님!). 재시작 `hermes --profile <p> gateway restart`. → `:8642` 루프백, 로컬 무인증(네트워크 노출 시 `API_SERVER_KEY`).
+- **검증된 엔드포인트**: `/v1/models`·`/v1/chat/completions`·`/v1/runs`(+`/{id}`,`/{id}/events` SSE,`/{id}/stop`)·`/v1/responses`·`/api/jobs`(CRUD+run). 위임은 `/v1/runs/{id}/events`의 **`name=="delegate_task"` function_call 아이템**으로 옴(별도 이벤트 타입 없음, OpenAI Responses 스타일).
+- ⚠️ **두 surface 구분**: api_server `:8642`(앱 주 연동) vs `hermes dashboard :9119`(관리 SPA + 칸반 REST, 세션 토큰). 칸반 DB는 프로필별 `~/.hermes/profiles/<p>/kanban.db`, `hermes kanban` CLI로 접근.
+- (옛 메모) 활성화: Hermes `.env`에 `API_SERVER_ENABLED=true`, `API_SERVER_KEY=<key>`. 베이스 `http://<host>:8642/v1`, 인증 `Authorization: Bearer <key>`.
 - **연결 설정**: `HERMES_API_URL`(기본 `127.0.0.1:8642`) + `HERMES_API_TOKEN`. 서버측 프록시(브라우저는 `/api/*`만 호출). → `src/server/hermes-api.ts`, `src/server/gateway-capabilities.ts`.
 - **capability 자동 감지**: `probeGateway()`가 `/health`·`/v1/chat/completions`·`/v1/models`·`/api/{sessions,skills,memory,config,jobs}`를 병렬 probe(120s 캐시) → 있는 기능만 켬. → 요구 "PC별 자동 표시"의 토대. (`src/server/gateway-capabilities.ts:168`)
 - **위임 스트리밍**: `POST /v1/runs` → `GET /v1/runs/{id}/events`(SSE)에서 토큰 + sub-agent lifecycle. Studio에 프록시 이미 있음 → `src/routes/api/hermes-runs.ts`, `hermes-runs.$runId.events.ts`. `delegate_task` 툴콜은 `👥 Delegate Task` 카드로 렌더(`src/screens/chat/components/message-item.tsx:362`).
