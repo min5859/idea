@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 /**
  * HermesTalk — PC별 발견된 게이트웨이(=에이전트 채팅방) 조회 훅 (요구 #2)
@@ -46,5 +46,65 @@ export function useHermesAgents() {
     online: query.data?.online ?? 0,
     isLoading: query.isLoading && !query.data,
     error: query.error instanceof Error ? query.error.message : null,
+  }
+}
+
+// ── 활성 게이트웨이(어느 봇과 채팅 중인가) ──────────────────────────────
+
+export const activeGatewayQueryKey = ['hermestalk', 'active-gateway'] as const
+
+async function fetchActiveGateway(): Promise<string> {
+  const res = await fetch('/api/hermestalk/active-gateway')
+  if (!res.ok) throw new Error(`active-gateway fetch failed: ${res.status}`)
+  const json = (await res.json()) as { baseUrl?: string }
+  return json.baseUrl ?? ''
+}
+
+async function postActiveGateway(baseUrl: string): Promise<string> {
+  const res = await fetch('/api/hermestalk/active-gateway', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ baseUrl }),
+  })
+  const json = (await res.json().catch(() => ({}))) as {
+    ok?: boolean
+    baseUrl?: string
+    error?: string
+  }
+  if (!res.ok || !json.ok) {
+    throw new Error(json.error || `switch failed: ${res.status}`)
+  }
+  return json.baseUrl ?? baseUrl
+}
+
+/**
+ * 현재 활성 게이트웨이 조회 + 전환 mutation.
+ * 전환 성공 시 connection/gateway 상태 쿼리를 무효화해 presence/capability를 갱신한다.
+ */
+export function useActiveGateway() {
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: activeGatewayQueryKey,
+    queryFn: fetchActiveGateway,
+    refetchInterval: 15_000,
+    retry: false,
+  })
+
+  const mutation = useMutation({
+    mutationFn: postActiveGateway,
+    onSuccess: (baseUrl) => {
+      queryClient.setQueryData(activeGatewayQueryKey, baseUrl)
+      void queryClient.invalidateQueries({
+        queryKey: ['hermes', 'connection-status'],
+      })
+      void queryClient.invalidateQueries({ queryKey: hermesAgentsQueryKey })
+    },
+  })
+
+  return {
+    activeBaseUrl: query.data ?? '',
+    switchGateway: mutation.mutate,
+    switching: mutation.isPending,
+    pendingBaseUrl: mutation.isPending ? mutation.variables : null,
   }
 }

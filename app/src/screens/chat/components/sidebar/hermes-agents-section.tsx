@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from '@hugeicons/react'
-import { AiUserIcon } from '@hugeicons/core-free-icons'
-import { useHermesAgents } from '../../hooks/use-hermes-agents'
+import { AiUserIcon, CheckmarkCircle02Icon } from '@hugeicons/core-free-icons'
+import { useActiveGateway, useHermesAgents } from '../../hooks/use-hermes-agents'
 import type { DiscoveredAgent } from '../../hooks/use-hermes-agents'
 import { cn } from '@/lib/utils'
 import {
@@ -47,18 +47,43 @@ function agentPort(agent: DiscoveredAgent): string {
   return agent.baseUrl.match(/:(\d+)/)?.[1] ?? agent.baseUrl
 }
 
-function AgentRow({ agent }: { agent: DiscoveredAgent }) {
+function AgentRow({
+  agent,
+  active,
+  pending,
+  onSelect,
+}: {
+  agent: DiscoveredAgent
+  active: boolean
+  pending: boolean
+  onSelect: (baseUrl: string) => void
+}) {
   return (
     <TooltipProvider>
       <TooltipRoot>
         <TooltipTrigger
           render={
-            <div className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-primary-900 hover:bg-primary-200 dark:hover:bg-primary-800">
+            <button
+              type="button"
+              onClick={() => onSelect(agent.baseUrl)}
+              disabled={pending}
+              className={cn(
+                'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors',
+                active
+                  ? 'bg-accent-500/10 text-accent-500'
+                  : 'text-primary-900 hover:bg-primary-200 dark:hover:bg-primary-800',
+                pending && 'opacity-60',
+              )}
+              aria-pressed={active}
+            >
               <HugeiconsIcon
-                icon={AiUserIcon}
+                icon={active ? CheckmarkCircle02Icon : AiUserIcon}
                 size={20}
                 strokeWidth={1.5}
-                className="size-5 shrink-0 text-primary-500"
+                className={cn(
+                  'size-5 shrink-0',
+                  active ? 'text-accent-500' : 'text-primary-500',
+                )}
               />
               <span className="min-w-0 flex-1 truncate text-sm font-medium">
                 {agentLabel(agent)}
@@ -67,10 +92,12 @@ function AgentRow({ agent }: { agent: DiscoveredAgent }) {
                 :{agentPort(agent)}
               </span>
               <PresenceDot online={agent.online} />
-            </div>
+            </button>
           }
         />
-        <TooltipContent side="right">{agent.baseUrl}</TooltipContent>
+        <TooltipContent side="right">
+          {active ? `${agent.baseUrl} (활성)` : agent.baseUrl}
+        </TooltipContent>
       </TooltipRoot>
     </TooltipProvider>
   )
@@ -78,6 +105,9 @@ function AgentRow({ agent }: { agent: DiscoveredAgent }) {
 
 export function HermesAgentsSection() {
   const { agents, candidates, isLoading, error } = useHermesAgents()
+  const { activeBaseUrl, switchGateway, switching, pendingBaseUrl } =
+    useActiveGateway()
+  const normalizedActive = activeBaseUrl.replace(/\/+$/, '')
 
   return (
     <div className="px-2">
@@ -104,9 +134,21 @@ export function HermesAgentsSection() {
         </div>
       ) : (
         <div className="space-y-0.5">
-          {agents.map((agent) => (
-            <AgentRow key={agent.id} agent={agent} />
-          ))}
+          {agents.map((agent) => {
+            const normalizedBase = agent.baseUrl.replace(/\/+$/, '')
+            return (
+              <AgentRow
+                key={agent.id}
+                agent={agent}
+                active={normalizedBase === normalizedActive}
+                pending={
+                  switching &&
+                  pendingBaseUrl?.replace(/\/+$/, '') === normalizedBase
+                }
+                onSelect={switchGateway}
+              />
+            )
+          })}
         </div>
       )}
     </div>

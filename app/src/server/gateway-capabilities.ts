@@ -257,6 +257,28 @@ export async function ensureGatewayProbed(): Promise<GatewayCapabilities> {
 
 // ── Accessors ─────────────────────────────────────────────────────
 
+/**
+ * HermesTalk (Phase 2): 활성 게이트웨이를 런타임에 전환한다.
+ *
+ * `HERMES_API`는 mutable `let` export(ES live binding)라 재할당하면 이를
+ * import한 모든 모듈(hermes-api, runs, jobs 등)에 자동 반영된다. capabilities를
+ * stale로 만들어 다음 `ensureGatewayProbed()`가 새 게이트웨이 기준으로 재probe한다.
+ *
+ * 주의: 전역 전환(단일 사용자 도구 전제). 동시 멀티룸은 비목표.
+ */
+export function setActiveGateway(baseUrl: string): void {
+  const next = baseUrl.replace(/\/+$/, '')
+  if (next === HERMES_API) return
+  HERMES_API = next
+  capabilities = { ...capabilities, probed: false }
+  lastProbeAt = 0
+  console.log(`[gateway] Active gateway switched to ${HERMES_API}`)
+}
+
+export function getActiveGateway(): string {
+  return HERMES_API
+}
+
 /** Full capabilities — backward compatible */
 export function getCapabilities(): GatewayCapabilities {
   return capabilities

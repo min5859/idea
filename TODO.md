@@ -29,7 +29,8 @@
 - [x] 후보 게이트웨이 목록 = env `HERMESTALK_GATEWAYS`(콤마구분), 미설정 시 단일 기본
 - [x] 다중 게이트웨이 probe 라우트 `app/src/routes/api/hermestalk/agents.ts` 추가(비침습) — `/health`+`/v1/models`로 살아있는 것만 반환. 검증: candidates:2→online:1(가짜 필터)
 - [x] **(UI)** `chat-sidebar.tsx`에 "Agents" 섹션 추가 — 발견된 게이트웨이를 "채팅방"으로 렌더 + presence 뱃지(emerald ping). 신규 파일만(`hooks/use-hermes-agents.ts` 10s 폴링, `components/sidebar/hermes-agents-section.tsx`) + 사이드바 2줄 주입(비침습). 실측: candidates 2→online 1(maccoder :8642), tsc 0에러, vite 트랜스폼 200
-  - ⏳ (남음) 에이전트 클릭→해당 게이트웨이와 채팅(게이트웨이 전환). 백엔드가 단일 `HERMES_API` 하드와이어드라 Phase 3/4에서 배선
+- [x] **(전환 배선)** 에이전트 클릭→해당 게이트웨이로 전역 전환. `HERMES_API` live-binding `let`을 `setActiveGateway()`로 재할당 + `probeGateway({force})` 재probe(최소 침습, 채팅 경로 무수정). 신규 라우트 `api/hermestalk/active-gateway.ts`(GET/POST, 후보 검증=SSRF 가드), 사이드바 행 클릭+활성 하이라이트. 실측: 9999→400, 8643(offline)→capability false, 8642→health/models true
+  - ⏳ (비목표) 동시 멀티룸(룸마다 다른 게이트웨이 동시 스트리밍)은 per-request 스레딩 필요 → 후순위
 - [ ] 집/회사 PC에서 각각 다른 `HERMESTALK_GATEWAYS`로 다른 에이전트가 뜨는지 확인(2번째 PC 필요)
 
 ## Phase 3 — 1:1 메신저 UX (요구 3·4 일부)
