@@ -10,6 +10,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { memo, useMemo } from 'react'
 import { getMessageTimestamp } from '../../utils'
+import { markSessionRead } from '../../unread-store'
 import type { SessionMeta } from '../../types'
 import { cn } from '@/lib/utils'
 import {
@@ -23,6 +24,7 @@ type SessionItemProps = {
   session: SessionMeta
   active: boolean
   isPinned: boolean
+  unread?: boolean
   onSelect?: () => void
   onTogglePin: (session: SessionMeta) => void
   onRename: (session: SessionMeta) => void
@@ -97,6 +99,7 @@ function SessionItemComponent({
   session,
   active,
   isPinned,
+  unread = false,
   onSelect,
   onTogglePin,
   onRename,
@@ -131,6 +134,12 @@ function SessionItemComponent({
         try {
           localStorage.setItem('hermes-last-session', session.friendlyId)
         } catch {}
+        markSessionRead(
+          session.friendlyId,
+          typeof session.updatedAt === 'number'
+            ? session.updatedAt
+            : undefined,
+        )
         onSelect?.()
       }}
       className={cn(
@@ -145,11 +154,23 @@ function SessionItemComponent({
       <div className="flex-1 min-w-0 py-1.5">
         <div
           className={cn(
-            'truncate text-sm font-[500]',
+            'flex items-center gap-1.5 truncate text-sm font-[500]',
             isGenerating ? 'text-primary-700' : '',
+            unread && !active ? 'font-semibold text-primary-950' : '',
           )}
         >
-          <span className={cn(isGenerating ? 'animate-pulse' : undefined)}>
+          {unread && !active ? (
+            <span
+              className="size-2 shrink-0 rounded-full bg-accent-500"
+              aria-label="Unread"
+            />
+          ) : null}
+          <span
+            className={cn(
+              'truncate',
+              isGenerating ? 'animate-pulse' : undefined,
+            )}
+          >
             {baseTitle}
           </span>
         </div>
@@ -225,6 +246,7 @@ function SessionItemComponent({
 function areSessionItemsEqual(prev: SessionItemProps, next: SessionItemProps) {
   if (prev.active !== next.active) return false
   if (prev.isPinned !== next.isPinned) return false
+  if (prev.unread !== next.unread) return false
   if (prev.onSelect !== next.onSelect) return false
   if (prev.onTogglePin !== next.onTogglePin) return false
   if (prev.onRename !== next.onRename) return false

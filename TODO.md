@@ -34,9 +34,10 @@
 - [ ] 집/회사 PC에서 각각 다른 `HERMESTALK_GATEWAYS`로 다른 에이전트가 뜨는지 확인(2번째 PC 필요)
 
 ## Phase 3 — 1:1 메신저 UX (요구 3·4 일부)
-- [ ] 채팅방(에이전트) 관점으로 사이드바 정리 + unread 카운트
-- [ ] 1:1 real 스트리밍 동작 확인(Studio 기본 흐름 활용), 텔레그램↔웹 세션 연속성 확인
-- [ ] 메시지 검색(`search-modal.tsx`) 메시지 대상으로 확장
+- [x] unread 뱃지 — `unread-store.ts`(useSyncExternalStore+localStorage, friendlyId→lastReadAt). 세션 `updatedAt`>lastReadAt이면 사이드바에 accent dot+bold. 활성 세션은 effect로 항상 읽음 처리(스트리밍 갱신 무시). 클릭 시 markSessionRead. 텔레그램 응답으로 세션 갱신되면 웹에 unread로 뜸(세션 공유 기반)
+- [x] 1:1 real 스트리밍 동작 확인 — 게이트웨이 `/v1/chat/completions` stream SSE 실측(role delta→finish stop→[DONE]). Studio 기본 흐름 그대로 사용(무수정)
+  - ⏳ (env) 텔레그램↔웹 세션 연속성은 텔레그램 봇 실사용 필요 — 2번째 환경에서 확인
+- [ ] 메시지 검색(`search-modal.tsx`) 메시지 대상으로 확장 — 다음 커밋(slack 벤치 #3, 후순위)
 
 ## Phase 4 — 그룹방 위임 (요구 5, 방식 A) ★하이라이트
 - [ ] `/chat/$sessionKey`에 group 세션 타입 추가 → 리더 프로필로 라우팅

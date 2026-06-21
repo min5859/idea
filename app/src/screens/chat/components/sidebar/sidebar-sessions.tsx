@@ -2,8 +2,13 @@
 
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDown01Icon } from '@hugeicons/core-free-icons'
-import { memo, useMemo } from 'react'
+import { memo, useEffect, useMemo } from 'react'
 import { SessionItem } from './session-item'
+import {
+  isSessionUnread,
+  markSessionRead,
+  useReadMap,
+} from '../../unread-store'
 import type { SessionMeta } from '../../types'
 import {
   Collapsible,
@@ -45,6 +50,26 @@ export const SidebarSessions = memo(function SidebarSessions({
   onRetry,
 }: SidebarSessionsProps) {
   const { pinnedSessionKeys, togglePinnedSession } = usePinnedSessions()
+  const readMap = useReadMap()
+
+  // 활성 세션은 항상 읽음 처리(스트리밍으로 updatedAt이 올라가도 unread로 안 뜨게)
+  const activeSession = sessions.find((s) => s.friendlyId === activeFriendlyId)
+  const activeUpdatedAt =
+    typeof activeSession?.updatedAt === 'number'
+      ? activeSession.updatedAt
+      : undefined
+  useEffect(() => {
+    if (activeFriendlyId) markSessionRead(activeFriendlyId, activeUpdatedAt)
+  }, [activeFriendlyId, activeUpdatedAt])
+
+  function unreadFor(session: SessionMeta): boolean {
+    if (session.friendlyId === activeFriendlyId) return false
+    return isSessionUnread(
+      typeof session.updatedAt === 'number' ? session.updatedAt : null,
+      readMap,
+      session.friendlyId,
+    )
+  }
 
   const [pinnedSessions, unpinnedSessions] = useMemo(() => {
     const pinnedKeys = new Set(pinnedSessionKeys)
@@ -90,6 +115,7 @@ export const SidebarSessions = memo(function SidebarSessions({
               session={session}
               active={session.friendlyId === activeFriendlyId}
               isPinned
+              unread={unreadFor(session)}
               onSelect={onSelect}
               onTogglePin={handleTogglePin}
               onRename={onRename}
@@ -135,6 +161,7 @@ export const SidebarSessions = memo(function SidebarSessions({
                       session={session}
                       active={session.friendlyId === activeFriendlyId}
                       isPinned={false}
+                      unread={unreadFor(session)}
                       onSelect={onSelect}
                       onTogglePin={handleTogglePin}
                       onRename={onRename}
