@@ -8,6 +8,10 @@ import { json } from '@tanstack/react-start'
 import { isAuthenticated } from '../../../server/auth-middleware'
 import { requireJsonContentType } from '../../../server/rate-limit'
 import { getTask, updateTask, deleteTask } from '../../../server/task-store'
+import {
+  getNativeTask,
+  isNativeKanbanAvailable,
+} from '../../../server/native-kanban-store'
 import type { TaskColumn, TaskPriority } from '../../../types/task'
 
 const VALID_COLUMNS: TaskColumn[] = ['backlog', 'todo', 'in_progress', 'review', 'done']
@@ -20,7 +24,9 @@ export const Route = createFileRoute('/api/tasks/$taskId')({
         if (!isAuthenticated(request)) {
           return json({ ok: false, error: 'Unauthorized' }, { status: 401 })
         }
-        const task = getTask(params.taskId)
+        const task = isNativeKanbanAvailable()
+          ? getNativeTask(params.taskId)
+          : getTask(params.taskId)
         if (!task) {
           return json({ ok: false, error: 'Task not found' }, { status: 404 })
         }

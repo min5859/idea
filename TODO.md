@@ -37,7 +37,7 @@
 - [x] unread 뱃지 — `unread-store.ts`(useSyncExternalStore+localStorage, friendlyId→lastReadAt). 세션 `updatedAt`>lastReadAt이면 사이드바에 accent dot+bold. 활성 세션은 effect로 항상 읽음 처리(스트리밍 갱신 무시). 클릭 시 markSessionRead. 텔레그램 응답으로 세션 갱신되면 웹에 unread로 뜸(세션 공유 기반)
 - [x] 1:1 real 스트리밍 동작 확인 — 게이트웨이 `/v1/chat/completions` stream SSE 실측(role delta→finish stop→[DONE]). Studio 기본 흐름 그대로 사용(무수정)
   - ⏳ (env) 텔레그램↔웹 세션 연속성은 텔레그램 봇 실사용 필요 — 2번째 환경에서 확인
-- [ ] 메시지 검색(`search-modal.tsx`) 메시지 대상으로 확장 — 다음 커밋(slack 벤치 #3, 후순위)
+- [ ] 메시지 검색(`search-modal.tsx`) 메시지 대상으로 확장 — **보류(블로커 보고)**: api_server에 메시지 전문 검색 엔드포인트 없음(세션 preview만). 전 세션 메시지 클라 수집은 과거 freezing 이슈(use-search-data 주석)로 위험. 게이트웨이 검색 지원 생기거나 별도 인덱스 도입 시 진행. slack 벤치 #3(최후순위)
 
 ## Phase 4 — 그룹방 위임 (요구 5, 방식 A) ★하이라이트
 - [ ] `/chat/$sessionKey`에 group 세션 타입 추가 → 리더 프로필로 라우팅
@@ -46,9 +46,10 @@
 - [ ] 리더 위임 → 서브봇 진행 → 취합 흐름이 한 화면에 시간순으로 보이는지 확인
 
 ## Phase 5 — 네이티브 칸반 전환 (요구 4, 방식 B) [결정 ①]
-- [ ] (Phase 1) Studio 자체 보드 그대로 사용 중 → 여기서 데이터 레이어 스왑
-- [ ] `task-store.ts`/`tasks-api.ts`를 `/api/plugins/kanban/` 프록시로 교체(UI 유지)
-- [ ] 그룹방 위임 작업이 네이티브 칸반에 생성되고 담당 봇이 claim → 두 PC/텔레그램에서 같은 보드 확인
+- [x] (Phase 1) Studio 자체 보드 → 여기서 데이터 레이어 스왑 완료(read)
+- [x] **데이터 레이어 스왑(read)** — 원계획 `/api/plugins/kanban/`(dashboard:9119)은 **dashboard 미기동**이라 불가 → **better-sqlite3로 네이티브 `kanban.db` 직접 readonly read**로 대체. 신규 `native-kanban-store.ts`(status→컬럼 매핑, 프로필 env), `/api/tasks` GET·`/api/tasks/$id` GET 분기(네이티브 가용 시 우선, 없으면 file store 폴백). UI 무수정. 실측: source=native-kanban, 7태스크, column=done 7 / assignee=frontend-eng 4(CLI stats 일치)
+  - ⏳ (v1 범위 외) Studio UI에서 네이티브로 create/move/delete 쓰기 — 네이티브 무결성·이벤트 발행 위험으로 CLI/봇 경로 유지. 그룹방 위임 생성(Phase 4)은 게이트웨이가 직접 네이티브에 씀
+- [ ] 그룹방 위임 작업이 네이티브 칸반에 생성되고 담당 봇이 claim → 두 PC/텔레그램에서 같은 보드 확인 (Phase 4 위임 + 모델 재인증 후 end-to-end)
 - [ ] (Nice) `/v1/skills`로 스킬 보드 실데이터 확인
 
 ## Phase 6 — 실사용 안정화

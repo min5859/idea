@@ -7,6 +7,10 @@ import { json } from '@tanstack/react-start'
 import { isAuthenticated } from '../../../server/auth-middleware'
 import { requireJsonContentType } from '../../../server/rate-limit'
 import { listTasks, createTask } from '../../../server/task-store'
+import {
+  isNativeKanbanAvailable,
+  listNativeTasks,
+} from '../../../server/native-kanban-store'
 import type { TaskColumn, TaskPriority, TaskSourceType } from '../../../types/task'
 
 const VALID_COLUMNS: TaskColumn[] = ['backlog', 'todo', 'in_progress', 'review', 'done']
@@ -44,6 +48,19 @@ export const Route = createFileRoute('/api/tasks/')({
 
         const sourceId = url.searchParams.get('sourceId')
         if (sourceId) filter.sourceId = sourceId
+
+        // Phase 5: 네이티브 칸반(kanban.db) 가용 시 그걸 단일 진실원천으로 read.
+        // 없으면 Studio 자체 file store로 폴백(UI는 동일 형태라 무수정).
+        if (isNativeKanbanAvailable()) {
+          return json({
+            ok: true,
+            tasks: listNativeTasks({
+              column: filter.column,
+              assignee: filter.assignee,
+            }),
+            source: 'native-kanban',
+          })
+        }
 
         return json({ ok: true, tasks: listTasks(filter) })
       },
