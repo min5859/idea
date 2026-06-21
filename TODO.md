@@ -53,10 +53,10 @@
 - [ ] (Nice) `/v1/skills`로 스킬 보드 실데이터 확인
 
 ## Phase 6 — 실사용 안정화
-- [ ] 인증(WebAuthn/패스워드) — 원격/멀티PC 접속 대비 (webui 아이디어)
-- [ ] Docker Compose `restart: unless-stopped`로 게이트웨이+Studio 상시 가동
-- [ ] 집/회사 양쪽에서 1주일 실사용 → 깨지는 지점 수정
-- [ ] 업스트림(Studio) 변경 주기적 머지 절차 점검
+- [x] 인증 — **Studio 내장 password auth로 충족**: `HERMES_PASSWORD` + 세션토큰(Redis 영속) + timing-safe 비교 + Tailscale(100.x)/LAN 게이팅(`auth-middleware.ts`). 개인 도구엔 WebAuthn 불필요(YAGNI). 원격 접속 시 `HERMES_PASSWORD` 설정만 하면 됨
+- [x] Docker Compose `restart: unless-stopped` — `app/docker-compose.yml`의 hermes-agent·hermes-studio·redis 3개 서비스에 추가. (로컬은 launchd 상시 가동이 주 경로, docker는 대안)
+- [x] 업스트림(Studio) 변경 주기적 머지 절차 — `docs/UPSTREAM-MERGE.md`로 문서화(신규 파일 위주 + 기존 파일 최소 패치 목록 + 머지 후 스모크)
+- [ ] 집/회사 양쪽에서 1주일 실사용 → 깨지는 지점 수정 **(시간·2번째 PC 환경 필요 — 실사용 누적 항목)**
 
 ---
 
