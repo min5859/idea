@@ -41,11 +41,9 @@
 
 ## Phase 4 — 그룹방 위임 (요구 5, 방식 A) ★하이라이트
 - [x] plan·design (`docs/01-plan`·`docs/02-design`/phase4-group-delegation) — B안(chat group 모드 확장)
-- [x] **위임 이벤트 파서 (do 핵심, 모델 무관)** — `delegation-events.ts`: Responses SSE → 위임 타임라인 정규화(lifecycle `event` 필드, `delegate_task` function_call, output_text.delta, function_call_output 결과). 단위 검증 `delegation-events.test.ts` 5 pass(합성 위임 흐름 + 실제 캡처 run.failed). 라이브 캡처로 필드 미세조정 여지(모듈 isolated)
-- [ ] `/chat/$sessionKey` group 세션 타입 + `/v1/runs` 라우팅 (do, **모델 재인증 후 라이브 검증**)
-- [ ] `delegate_task`를 `message-item.tsx` 위임 말풍선으로 (do, 파서 출력 렌더 — 재인증 후)
-- [ ] @mention으로 특정 서브봇 지목(`chat-composer.tsx`)
-- [ ] 리더 위임 → 서브봇 진행 → 취합 흐름 시간순 (check, **모델 재인증 후 end-to-end real**)
+- [x] **위임 이벤트 파서 (do 핵심)** — `delegation-events.ts`: 실제 게이트웨이 어휘(`jobs-api.ts` RunEvent: `{event:"tool.started/completed", name:"delegate_task", input/output}`, `message.delta`, run.* lifecycle) → 위임 타임라인 정규화. Responses 스타일 폴백 유지. 단위 검증 6 pass(실 어휘 + 폴백 + 실제 캡처 run.failed). **PHASE0 문서가 Responses 스타일로 잘못 적혀 있었는데 파서 선구현으로 발견·정정**
+- [x] **그룹방 라우트 + 구독 훅 + @mention (do, 컴파일 검증)** — `/group` 라우트, `use-run-delegation.ts`(POST /api/hermes-runs[실측 run_id] + EventSource + 파서 누적), `delegation-timeline-view.tsx`(위임 말풍선), `mention-utils.ts`(@mention, 12 tests). 사이드바 "Group Room" 내비 추가. `/group` 200 + 모듈 트랜스폼 200, tsc 0에러
+- [ ] **라이브 end-to-end 검증** (check) — 모델 재인증 후: 실제 위임 run으로 tool 이벤트 필드 최종 확정 + 말풍선 시간순 렌더 확인. 파서/UI는 isolated라 필드 조정 안전
 
 ## Phase 5 — 네이티브 칸반 전환 (요구 4, 방식 B) [결정 ①]
 - [x] (Phase 1) Studio 자체 보드 → 여기서 데이터 레이어 스왑 완료(read)

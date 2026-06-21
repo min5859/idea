@@ -530,6 +530,7 @@ function ChatSidebarComponent({
   const isTerminalActive = pathname === '/terminal'
   const isJobsActive = pathname === '/jobs'
   const isMemoryActive = pathname === '/memory'
+  const isGroupActive = pathname === '/group'
   const isCrewsActive = pathname === '/crews' || pathname.startsWith('/crews/')
   const isConductorActive = pathname === '/conductor'
   const isOperationsActive = pathname === '/operations'
@@ -779,6 +780,13 @@ function ChatSidebarComponent({
       icon: Clock01Icon,
       label: 'Jobs',
       active: isJobsActive,
+    },
+    {
+      kind: 'link',
+      to: '/group',
+      icon: UserGroupIcon,
+      label: 'Group Room',
+      active: isGroupActive,
     },
     {
       kind: 'link',
