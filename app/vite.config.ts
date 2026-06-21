@@ -71,6 +71,12 @@ async function isHermesAgentHealthy(port = 8642): Promise<boolean> {
 const config = defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const hermesApiUrl = env.HERMES_API_URL?.trim() || 'http://127.0.0.1:8642'
+  // HermesTalk: 게이트웨이에 API_SERVER_KEY가 걸린 경우 dev 미들웨어 probe도 인증 필요
+  const hermesApiToken =
+    env.HERMES_API_TOKEN?.trim() || process.env.HERMES_API_TOKEN?.trim() || ''
+  const hermesAuthHeaders: Record<string, string> = hermesApiToken
+    ? { Authorization: `Bearer ${hermesApiToken}` }
+    : {}
 
   // Hermes Agent auto-start state
   let hermesAgentChild: ChildProcess | null = null
@@ -485,9 +491,11 @@ const config = defineConfig(({ mode, command }) => {
                 // Check for enhanced Hermes gateway first (has /api/sessions)
                 const [modelsRes, sessionsRes] = await Promise.all([
                   fetch(`${hermesApiUrl}/v1/models`, {
+                    headers: hermesAuthHeaders,
                     signal: AbortSignal.timeout(3000),
                   }).catch(() => null),
                   fetch(`${hermesApiUrl}/api/sessions?limit=1`, {
+                    headers: hermesAuthHeaders,
                     signal: AbortSignal.timeout(3000),
                   }).catch(() => null),
                 ])
@@ -499,6 +507,8 @@ const config = defineConfig(({ mode, command }) => {
                   res.end(
                     JSON.stringify({
                       ok: true,
+                      status: 'enhanced',
+                      label: 'Enhanced',
                       mode: 'enhanced',
                       backend: hermesApiUrl,
                     }),
@@ -511,6 +521,8 @@ const config = defineConfig(({ mode, command }) => {
                   res.end(
                     JSON.stringify({
                       ok: true,
+                      status: 'connected',
+                      label: 'Connected',
                       mode: 'portable',
                       backend: hermesApiUrl,
                     }),
@@ -519,6 +531,7 @@ const config = defineConfig(({ mode, command }) => {
                 }
                 // Fall back to /health for full Hermes backends
                 const healthRes = await fetch(`${hermesApiUrl}/health`, {
+                  headers: hermesAuthHeaders,
                   signal: AbortSignal.timeout(3000),
                 })
                 res.statusCode = healthRes.ok ? 200 : 502
@@ -526,7 +539,9 @@ const config = defineConfig(({ mode, command }) => {
                 res.end(
                   JSON.stringify({
                     ok: healthRes.ok,
-                    mode: 'enhanced',
+                    status: healthRes.ok ? 'connected' : 'disconnected',
+                    label: healthRes.ok ? 'Connected' : 'Disconnected',
+                    mode: healthRes.ok ? 'enhanced' : 'disconnected',
                     backend: hermesApiUrl,
                   }),
                 )
@@ -536,6 +551,8 @@ const config = defineConfig(({ mode, command }) => {
                 res.end(
                   JSON.stringify({
                     ok: false,
+                    status: 'disconnected',
+                    label: 'Disconnected',
                     mode: 'disconnected',
                     backend: hermesApiUrl,
                   }),
