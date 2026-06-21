@@ -25,11 +25,12 @@
 - [x] from-scratch 잔재 코드 `legacy/`로 이동 보관 완료(`agents.ts`·`skills.ts`·`types.ts`, 코드 정본은 포크라 미사용)
 - [ ] **mockup.html 재작도 결정**: 지금은 "메신저 UX 레이어 디자인 타깃"으로 역할만 재정의 + 틀린 사실 수정 완료. 전면 재작도는 **포크를 띄워 Studio 실제 화면을 본 뒤**, 그 위에 얹을 부분(채팅방=에이전트·presence·위임 말풍선·@mention)만 Studio 화면 기준으로 다시 그린다 (지금 추측으로 전면 재작도하지 않음)
 
-## Phase 2 — PC별 에이전트 자동 표시 (요구 2) — 백엔드 ✅ / UI ⏳
+## Phase 2 — PC별 에이전트 자동 표시 (요구 2) — 백엔드 ✅ / UI ✅
 - [x] 후보 게이트웨이 목록 = env `HERMESTALK_GATEWAYS`(콤마구분), 미설정 시 단일 기본
 - [x] 다중 게이트웨이 probe 라우트 `app/src/routes/api/hermestalk/agents.ts` 추가(비침습) — `/health`+`/v1/models`로 살아있는 것만 반환. 검증: candidates:2→online:1(가짜 필터)
-- [ ] **(UI 남음)** `chat-sidebar.tsx`가 Studio 내장 crew 대신 이 발견된 에이전트 목록을 "채팅방"으로 렌더 + presence 뱃지 — Studio UI 수정 필요(큰 작업)
-- [ ] 집/회사 PC에서 각각 다른 `HERMESTALK_GATEWAYS`로 다른 에이전트가 뜨는지 확인
+- [x] **(UI)** `chat-sidebar.tsx`에 "Agents" 섹션 추가 — 발견된 게이트웨이를 "채팅방"으로 렌더 + presence 뱃지(emerald ping). 신규 파일만(`hooks/use-hermes-agents.ts` 10s 폴링, `components/sidebar/hermes-agents-section.tsx`) + 사이드바 2줄 주입(비침습). 실측: candidates 2→online 1(maccoder :8642), tsc 0에러, vite 트랜스폼 200
+  - ⏳ (남음) 에이전트 클릭→해당 게이트웨이와 채팅(게이트웨이 전환). 백엔드가 단일 `HERMES_API` 하드와이어드라 Phase 3/4에서 배선
+- [ ] 집/회사 PC에서 각각 다른 `HERMESTALK_GATEWAYS`로 다른 에이전트가 뜨는지 확인(2번째 PC 필요)
 
 ## Phase 3 — 1:1 메신저 UX (요구 3·4 일부)
 - [ ] 채팅방(에이전트) 관점으로 사이드바 정리 + unread 카운트

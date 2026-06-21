@@ -38,6 +38,7 @@ import { ProvidersDialog } from './providers-dialog'
 import { SessionRenameDialog } from './sidebar/session-rename-dialog'
 import { SessionDeleteDialog } from './sidebar/session-delete-dialog'
 import { SidebarSessions } from './sidebar/sidebar-sessions'
+import { HermesAgentsSection } from './sidebar/hermes-agents-section'
 import type { ChatOpenSettingsDetail } from '../chat-events'
 import type { SessionMeta } from '../types'
 import { SettingsDialog } from '@/components/settings-dialog'
@@ -1088,6 +1089,13 @@ function ChatSidebarComponent({
             onSelectSession={onSelectSession}
           />
         </div>
+
+        {/* Agents (HermesTalk: 발견된 게이트웨이 = 채팅방 + presence) */}
+        {!isVisuallyCollapsed && (
+          <div className="shrink-0">
+            <HermesAgentsSection />
+          </div>
+        )}
 
         {/* Sessions list */}
         <div className={cn('shrink-0 mt-1', isMobile && 'order-1')}>
