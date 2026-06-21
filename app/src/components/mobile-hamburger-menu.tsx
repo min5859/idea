@@ -12,6 +12,7 @@ import {
   PuzzleIcon,
   Settings01Icon,
   UserGroupIcon,
+  UserMultiple02Icon,
 } from '@hugeicons/core-free-icons'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -50,6 +51,13 @@ const NAV_ITEMS = [
     icon: Clock01Icon,
     to: '/jobs',
     match: (p: string) => p.startsWith('/jobs'),
+  },
+  {
+    id: 'group',
+    label: 'Group Room',
+    icon: UserMultiple02Icon,
+    to: '/group',
+    match: (p: string) => p.startsWith('/group'),
   },
   {
     id: 'memory',
