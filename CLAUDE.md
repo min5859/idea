@@ -6,6 +6,11 @@
 
 **작업 순서는 `TODO.md`를 Phase 0부터 따른다.** mock 없음. 처음부터 real 연동 기준으로 만든다.
 
+> **현재 상태(2026-06)**: Phase 2~6 구현·실측 완료. Phase 7(진짜 멀티 agent 단톡방)은 백로그.
+> 설치·실행·사용법은 루트 `README.md` 참조. 실사용 시 게이트웨이 `API_SERVER_KEY` + 앱
+> `HERMES_API_TOKEN`(동일값)이 필요하다(§4). 현 Group Room = **방식 A 단일 리더 위임**이고,
+> `@A`→A·`@B`→B 각자 응답하는 진짜 그룹챗은 미구현(TODO Phase 7).
+
 ---
 
 ## 0. 핵심 방향 (이전 해커톤 계획과 무엇이 바뀌었나)
@@ -54,8 +59,10 @@
 
 ## 4. Hermes 게이트웨이 연동 (✅ Phase 0 실측 완료 — `PHASE0-VERIFICATION.md`)
 
-- **활성화 (실측)**: **프로필 전용** `~/.hermes/profiles/<프로필>/.env`에 `API_SERVER_ENABLED=true` (글로벌 `~/.hermes/.env` 아님!). 재시작 `hermes --profile <p> gateway restart`. → `:8642` 루프백, 로컬 무인증(네트워크 노출 시 `API_SERVER_KEY`).
-- **검증된 엔드포인트**: `/v1/models`·`/v1/chat/completions`·`/v1/runs`(+`/{id}`,`/{id}/events` SSE,`/{id}/stop`)·`/v1/responses`·`/api/jobs`(CRUD+run). 위임은 `/v1/runs/{id}/events`의 **`name=="delegate_task"` function_call 아이템**으로 옴(별도 이벤트 타입 없음, OpenAI Responses 스타일).
+- **활성화 (실측)**: **프로필 전용** `~/.hermes/profiles/<프로필>/.env`에 `API_SERVER_ENABLED=true` (글로벌 `~/.hermes/.env` 아님!). 재시작 `hermes --profile <p> gateway restart`. → `:8642` 루프백.
+  - ⚠️ **정정(실측)**: 단순 호출은 루프백 무인증이지만, **HermesTalk 앱 채팅은 게이트웨이 "세션 연속(session continuation)"을 써서 `API_SERVER_KEY`가 사실상 필수**다. 없으면 `403 Session continuation requires API key authentication` → 응답 없음. 프로필 `.env`의 `API_SERVER_KEY` = 앱 `HERMES_API_TOKEN` 동일값으로 맞춘다. (키 설정 시 무인증=401)
+- **검증된 엔드포인트**: `/v1/models`·`/v1/chat/completions`·`/v1/runs`(+`/{id}`,`/{id}/events` SSE,`/{id}/stop`)·`/v1/responses`·`/api/jobs`(CRUD+run).
+  - ⚠️ **위임 이벤트 형태 정정(라이브 캡처 실측)**: PHASE0 메모의 "OpenAI Responses function_call" 스타일이 아니라 **`event` 필드 어휘**다 — `{event:"tool.started"|"tool.completed", tool:"delegate_task", input?/output?/duration}` + `{event:"message.delta", delta}` + `run.{created,in_progress,completed,failed}`(completed에 `output`=최종 텍스트). 위임 내용·결과는 tool 이벤트가 아니라 리더 message.delta/run.completed.output로 온다. 파서: `src/screens/chat/delegation-events.ts`(양쪽 어휘 방어).
 - ⚠️ **두 surface 구분**: api_server `:8642`(앱 주 연동) vs `hermes dashboard :9119`(관리 SPA + 칸반 REST, 세션 토큰). 칸반 DB는 프로필별 `~/.hermes/profiles/<p>/kanban.db`, `hermes kanban` CLI로 접근.
 - (옛 메모) 활성화: Hermes `.env`에 `API_SERVER_ENABLED=true`, `API_SERVER_KEY=<key>`. 베이스 `http://<host>:8642/v1`, 인증 `Authorization: Bearer <key>`.
 - **연결 설정**: `HERMES_API_URL`(기본 `127.0.0.1:8642`) + `HERMES_API_TOKEN`. 서버측 프록시(브라우저는 `/api/*`만 호출). → `src/server/hermes-api.ts`, `src/server/gateway-capabilities.ts`.
@@ -90,7 +97,7 @@ Studio chat 화면은 이미 풍부(세션 사이드바·말풍선·composer·Co
 ## 7. 칸반 전략 (결정 ①)
 
 - **목표 = Hermes 네이티브 칸반(방식 B).** 이유: 집/회사 PC가 각자 자기 Hermes를 갖고, 네이티브 보드는 그 PC의 프로필들이 공유하며 봇이 claim 가능. Studio의 `.runtime/tasks.json`은 봇과 단절돼 있어 "그룹방 위임 → 봇 claim" 비전을 못 살린다.
-- **단계적 전환**: Phase 1은 Studio 자체 보드 그대로(빠른 가동) → Phase 2에서 `task-store.ts`/`tasks-api.ts` 데이터 레이어를 `/api/plugins/kanban/` 프록시로 스왑(UI는 유지).
+- **전환 결과(Phase 5 실측)**: dashboard(:9119) `/api/plugins/kanban/` REST는 dashboard 미기동이라 불가 → **better-sqlite3로 네이티브 `~/.hermes/profiles/<p>/kanban.db`를 readonly 직접 read**로 스왑(`src/server/native-kanban-store.ts`, `/api/tasks` GET 분기). UI 유지. ⚠️ **읽기 전용** — 생성/이동/claim은 `hermes kanban` CLI/봇 담당(쓰기 경로는 v1 범위 외).
 
 ## 8. 작업 규칙
 

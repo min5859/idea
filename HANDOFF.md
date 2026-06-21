@@ -1,5 +1,8 @@
 # HermesTalk — 세션 핸드오프 (Phase 2 UI부터 이어서)
 
+> ⚠️ **이 문서는 과거 핸드오프 기록입니다(Phase 2 UI 시점).** 현재 Phase 2~6은 완료됐습니다.
+> 최신 상태·진행은 `TODO.md`, 설치·사용법은 `README.md`, 방향·실측 사실은 `CLAUDE.md`를 보세요.
+
 > 새 세션은 **`app/` 디렉터리에서 Claude Code를 열고** 이 문서 + `CLAUDE.md` + `TODO.md` + `PHASE0-VERIFICATION.md`를 먼저 읽어라.
 > 핵심: 0부터 만들지 않는다. `app/` = **Hermes Studio v1.20.0 포크**. 거기에 **메신저 UX 레이어**만 얹는다.
 

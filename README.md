@@ -51,24 +51,28 @@ hermes profile list                 # 현재 프로필 확인
 ```
 이 PC에서 쓸 프로필명을 정한다(예: 집=`maccoder`, 회사=`workpc`). **PC마다 달라도 된다.**
 
-### 2-2. api_server 켜기 (앱 연동의 핵심)
+### 2-2. api_server 켜기 + API 키 (앱 연동의 핵심)
 **프로필 전용** `.env`에 추가한다. ⚠️ 글로벌 `~/.hermes/.env`가 아니라 프로필별 파일:
 ```bash
 # ~/.hermes/profiles/<프로필>/.env
 API_SERVER_ENABLED=true
-# 네트워크에 노출하거나 다른 기기에서 붙을 때만(로컬 루프백은 무인증):
-# API_SERVER_KEY=<원하는-키>
+API_SERVER_KEY=<원하는-비밀값>      # 예: openssl rand -hex 24
 ```
+> ⚠️ **`API_SERVER_KEY`는 사실상 필수다.** 로컬 단순 호출은 키 없이도 되지만, HermesTalk의
+> 채팅은 게이트웨이의 **세션 연속(session continuation)** 기능을 쓰는데 이게 키를 요구한다.
+> 키가 없으면 채팅 전송 시 `403 Session continuation requires API key authentication`이 나고
+> 응답이 안 온다. → 여기서 정한 값을 앱의 `HERMES_API_TOKEN`(3장)에 **똑같이** 넣는다.
+
 재시작:
 ```bash
 hermes --profile <프로필> gateway restart
 ```
 > ⚠️ foreground `run --replace`는 launchd/서비스 락과 충돌하니 쓰지 말 것. `gateway restart` 사용.
 
-확인:
+확인(키 설정 후엔 무인증은 401, 키 있으면 200):
 ```bash
-curl -s http://127.0.0.1:8642/v1/models      # {"data":[{"id":"<프로필>",...}]}
-curl -s http://127.0.0.1:8642/health
+curl -s http://127.0.0.1:8642/health                                   # 200
+curl -s -H "Authorization: Bearer <키>" http://127.0.0.1:8642/v1/models  # {"data":[{"id":"<프로필>",...}]}
 ```
 
 ### 2-3. (선택) 텔레그램 — 웹·텔레그램 동시 사용
@@ -104,12 +108,15 @@ corepack prepare pnpm@latest --activate     # pnpm 없으면
 pnpm install
 pnpm rebuild better-sqlite3 esbuild unrs-resolver   # 네이티브 모듈(allowBuilds 처리됨)
 
-# 실행 (이 PC의 프로필명으로 바꿔서)
+# 실행 (이 PC의 프로필명/키로 바꿔서)
 HERMES_API_URL=http://127.0.0.1:8642 \
+HERMES_API_TOKEN=<2-2에서_정한_API_SERVER_KEY와_동일> \
 HERMESTALK_GATEWAYS=http://127.0.0.1:8642 \
 HERMESTALK_KANBAN_PROFILE=<프로필> \
   pnpm dev      # → http://localhost:3000
 ```
+> `HERMES_API_TOKEN`은 게이트웨이 `.env`의 `API_SERVER_KEY`와 **같은 값**이어야 한다(2-2 참고).
+> 안 맞으면 채팅이 401/403으로 막힌다.
 
 브라우저에서 **http://localhost:3000** 접속.
 
@@ -120,7 +127,7 @@ HERMESTALK_KANBAN_PROFILE=<프로필> \
 | 변수 | 기본값 | 설명 |
 |---|---|---|
 | `HERMES_API_URL` | `http://127.0.0.1:8642` | 주 게이트웨이 baseUrl |
-| `HERMES_API_TOKEN` | (없음) | api_server에 `API_SERVER_KEY` 설정 시 Bearer 토큰 |
+| `HERMES_API_TOKEN` | (없음) | **사실상 필수** — 게이트웨이 `API_SERVER_KEY`와 동일값. 채팅(세션 연속)에 필요 |
 | `HERMESTALK_GATEWAYS` | `HERMES_API_URL` 1개 | 발견할 게이트웨이 후보(콤마 구분). 예: `http://127.0.0.1:8642,http://127.0.0.1:8643` |
 | `HERMESTALK_KANBAN_PROFILE` | `HERMES_PROFILE` 또는 `maccoder` | 네이티브 칸반/메시지검색이 읽을 프로필(`~/.hermes/profiles/<p>/`) |
 | `HERMES_PASSWORD` | (없음) | 설정 시 웹 접속에 비밀번호 요구(원격/멀티PC 접속용) |
@@ -146,8 +153,16 @@ HERMESTALK_GATEWAYS=http://127.0.0.1:8642,http://127.0.0.1:8643 ... pnpm dev
 | **1:1 채팅** | Chat / New Session | 실시간 스트리밍. 텔레그램 대화도 같은 세션으로 이어짐 |
 | **unread 뱃지** | 사이드바 세션 목록 | 안 읽은 세션에 accent dot + 굵게 |
 | **그룹방 위임** ★ | 사이드바 "Group Room" (`/group`) | 리더에게 복합 작업 → `delegate_task` 위임이 말풍선으로(완료·소요시간) + 취합. `@`로 워커 지목. ⌘/Ctrl+Enter 전송 |
-| **칸반 보드** | Tasks | 네이티브 칸반(`kanban.db`) 반영. 봇이 claim/complete하면 그대로 보임 |
+| **칸반 보드** | Tasks | 네이티브 칸반(`kanban.db`) **읽기** 반영. 봇이 claim/complete하면 그대로 보임 |
 | **메시지 검색** | 사이드바 Search | 세션·파일·스킬 + **메시지 본문**(state.db FTS) 검색 |
+
+> **Group Room의 동작 모델(방식 A)**: 메시지는 **활성 게이트웨이 1개(리더)** 에게만 가고, 리더가
+> `delegate_task`로 일회용 서브에이전트에 위임·취합한다. `@멘션`은 리더에게 주는 **힌트**이지,
+> 멘션한 다른 agent에게 직접 라우팅되는 게 아니다. `@A`→A, `@B`→B가 각자 응답하는 **진짜 멀티 agent
+> 단톡방은 미구현**(백로그 `TODO.md` Phase 7).
+>
+> **칸반은 v1에서 읽기 전용.** Studio UI에서 태스크를 만들면 네이티브 보드엔 안 나타난다
+> (생성/이동/claim은 `hermes kanban` CLI / 봇이 담당).
 
 ### 그룹방 위임 예시
 ```
@@ -178,7 +193,9 @@ docker compose up -d        # 게이트웨이 + Studio 상시 가동
 
 | 증상 | 원인 / 해결 |
 |---|---|
+| 채팅 보냈는데 응답 없음 + `403 Session continuation requires API key` | 게이트웨이 `API_SERVER_KEY` 미설정 또는 앱 `HERMES_API_TOKEN` 불일치 → **2-2/3장**대로 동일 값 설정 후 `gateway restart` + 앱 재기동 |
 | 채팅 응답이 비거나 `run.failed` | 모델 토큰 만료 → **2-5 재인증**(`codex` → `hermes auth`) |
+| 좌상단 **OFFLINE** 표시 | dev에서 `HERMES_API_TOKEN` 없이 띄우면 상태 probe가 401 → 표시만 offline. 토큰과 함께 재기동 + 브라우저 새로고침 |
 | 사이드바 Agents가 비어 있음 | 게이트웨이 미기동 → `hermes --profile <p> gateway restart`, `curl :8642/health` 확인. `HERMESTALK_GATEWAYS` 포트 확인 |
 | Tasks 보드가 비어 있음 | `HERMESTALK_KANBAN_PROFILE`이 실제 프로필명인지 확인. `hermes kanban list --profile <p>`로 데이터 확인 |
 | 포트 3000이 안 잡힘 | 좀비 dev 서버 → `lsof -nP -tiTCP:3000 -sTCP:LISTEN \| xargs kill -9` |
