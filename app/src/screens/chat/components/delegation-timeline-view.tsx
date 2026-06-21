@@ -75,12 +75,16 @@ export function DelegationTimelineView({
                 d.status === 'done' ? 'text-emerald-600' : 'text-primary-400',
               )}
             >
-              {d.status === 'done' ? '결과 도착' : '진행 중'}
+              {d.status === 'done'
+                ? d.durationSec != null
+                  ? `완료 · ${d.durationSec.toFixed(1)}s`
+                  : '완료'
+                : '진행 중'}
             </span>
           </div>
-          {d.goal ? (
-            <div className="text-sm text-primary-900">{d.goal}</div>
-          ) : null}
+          <div className="text-sm text-primary-900">
+            {d.goal ?? '서브에이전트에게 작업 위임'}
+          </div>
           {d.result ? (
             <div className="mt-2 whitespace-pre-wrap rounded-lg bg-primary-100 px-2.5 py-1.5 text-sm text-primary-800">
               {d.result}

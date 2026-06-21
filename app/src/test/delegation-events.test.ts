@@ -29,72 +29,67 @@ describe('reduceRunEvents — real captured run.failed', () => {
   })
 })
 
-describe('reduceRunEvents — real event-field vocabulary (jobs-api RunEvent)', () => {
-  it('tool.started/completed(delegate_task) + message.delta → 타임라인', () => {
-    // 실제 게이트웨이 어휘: {event, name, input, output, delta}
+describe('reduceRunEvents — REAL captured shape (run_37f6, tool 필드)', () => {
+  it('tool.started/completed(tool 필드) + message.delta + run.completed.output', () => {
+    // ✅ 실제 캡처: tool 이벤트는 필드명 `tool`, input/output 없음, duration/preview만.
+    //    위임 결과 텍스트는 message.delta / run.completed.output로 옴.
     const events = [
-      { event: 'run.created', run_id: 'r1', timestamp: 1 },
-      { event: 'run.in_progress', run_id: 'r1', timestamp: 2 },
-      {
-        event: 'tool.started',
-        run_id: 'r1',
-        timestamp: 3,
-        name: 'delegate_task',
-        input: '{"goal":"say hello in French","assignee":"fr-worker"}',
-      },
-      {
-        event: 'tool.started',
-        run_id: 'r1',
-        timestamp: 4,
-        name: 'delegate_task',
-        input: '{"goal":"say hello in Korean","role":"ko-worker"}',
-      },
-      // 비-delegate 툴은 무시
-      { event: 'tool.started', run_id: 'r1', timestamp: 5, name: 'web_search', input: '{}' },
+      { event: 'tool.started', run_id: 'r', timestamp: 1, tool: 'delegate_task', preview: null },
       {
         event: 'tool.completed',
-        run_id: 'r1',
+        run_id: 'r',
+        timestamp: 2,
+        tool: 'delegate_task',
+        duration: 3.994,
+        error: false,
+      },
+      { event: 'message.delta', run_id: 'r', timestamp: 3, delta: '“Hello”는 ' },
+      { event: 'message.delta', run_id: 'r', timestamp: 4, delta: 'Bonjour, 안녕하세요.' },
+      { event: 'reasoning.available', run_id: 'r', timestamp: 5, text: '...' },
+      {
+        event: 'run.completed',
+        run_id: 'r',
         timestamp: 6,
-        name: 'delegate_task',
-        input: '{"goal":"say hello in French","assignee":"fr-worker"}',
-        output: 'Bonjour',
+        output: '“Hello”는 French로 “Bonjour”, Korean으로 “안녕하세요”입니다.',
+        usage: { input_tokens: 27440, output_tokens: 147, total_tokens: 27587 },
       },
-      {
-        event: 'tool.completed',
-        run_id: 'r1',
-        timestamp: 7,
-        name: 'delegate_task',
-        input: '{"goal":"say hello in Korean","role":"ko-worker"}',
-        output: '안녕하세요',
-      },
-      { event: 'message.delta', run_id: 'r1', timestamp: 8, delta: 'Both ' },
-      { event: 'message.delta', run_id: 'r1', timestamp: 9, delta: 'done.' },
-      { event: 'run.completed', run_id: 'r1', timestamp: 10 },
     ]
     const t = reduceRunEvents(events)
 
     expect(t.status).toBe('completed')
-    expect(t.error).toBeNull()
-    expect(t.assistantText).toBe('Both done.')
-    expect(t.delegations).toHaveLength(2)
-
-    const fr = t.delegations.find((d) => d.goal === 'say hello in French')!
-    expect(fr.target).toBe('fr-worker')
-    expect(fr.result).toBe('Bonjour')
-    expect(fr.status).toBe('done')
-
-    const ko = t.delegations.find((d) => d.goal === 'say hello in Korean')!
-    expect(ko.target).toBe('ko-worker')
-    expect(ko.result).toBe('안녕하세요')
-    expect(ko.status).toBe('done')
-  })
-
-  it('completed without started still records result', () => {
-    const t = reduceRunEvents([
-      { event: 'tool.completed', name: 'delegate_task', input: '{"goal":"g"}', output: 'R' },
-    ])
     expect(t.delegations).toHaveLength(1)
     expect(t.delegations[0].status).toBe('done')
+    expect(t.delegations[0].durationSec).toBe(3.994)
+    // message.delta 누적이 있으면 그걸 우선
+    expect(t.assistantText).toBe('“Hello”는 Bonjour, 안녕하세요.')
+  })
+
+  it('run.completed.output을 delta 없을 때 assistantText로 사용', () => {
+    const t = reduceRunEvents([
+      { event: 'tool.started', tool: 'delegate_task' },
+      { event: 'tool.completed', tool: 'delegate_task', duration: 1 },
+      { event: 'run.completed', output: 'final only' },
+    ])
+    expect(t.assistantText).toBe('final only')
+    expect(t.delegations[0].durationSec).toBe(1)
+  })
+
+  it('비-delegate tool은 무시', () => {
+    const t = reduceRunEvents([
+      { event: 'tool.started', tool: 'web_search' },
+      { event: 'tool.completed', tool: 'web_search' },
+    ])
+    expect(t.delegations).toHaveLength(0)
+  })
+
+  it('폴백: name/input/output 어휘(jobs-api 타입)도 처리', () => {
+    const t = reduceRunEvents([
+      { event: 'tool.started', name: 'delegate_task', input: '{"goal":"g","assignee":"w"}' },
+      { event: 'tool.completed', name: 'delegate_task', input: '{"goal":"g","assignee":"w"}', output: 'R' },
+    ])
+    expect(t.delegations).toHaveLength(1)
+    expect(t.delegations[0].goal).toBe('g')
+    expect(t.delegations[0].target).toBe('w')
     expect(t.delegations[0].result).toBe('R')
   })
 })

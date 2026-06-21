@@ -43,7 +43,7 @@
 - [x] plan·design (`docs/01-plan`·`docs/02-design`/phase4-group-delegation) — B안(chat group 모드 확장)
 - [x] **위임 이벤트 파서 (do 핵심)** — `delegation-events.ts`: 실제 게이트웨이 어휘(`jobs-api.ts` RunEvent: `{event:"tool.started/completed", name:"delegate_task", input/output}`, `message.delta`, run.* lifecycle) → 위임 타임라인 정규화. Responses 스타일 폴백 유지. 단위 검증 6 pass(실 어휘 + 폴백 + 실제 캡처 run.failed). **PHASE0 문서가 Responses 스타일로 잘못 적혀 있었는데 파서 선구현으로 발견·정정**
 - [x] **그룹방 라우트 + 구독 훅 + @mention (do, 컴파일 검증)** — `/group` 라우트, `use-run-delegation.ts`(POST /api/hermes-runs[실측 run_id] + EventSource + 파서 누적), `delegation-timeline-view.tsx`(위임 말풍선), `mention-utils.ts`(@mention, 12 tests). 사이드바 "Group Room" 내비 추가. `/group` 200 + 모듈 트랜스폼 200, tsc 0에러
-- [ ] **라이브 end-to-end 검증** (check) — 모델 재인증 후: 실제 위임 run으로 tool 이벤트 필드 최종 확정 + 말풍선 시간순 렌더 확인. 파서/UI는 isolated라 필드 조정 안전
+- [x] **라이브 end-to-end 검증 (check) ✅** — 모델 재인증 후 실제 위임 run 2회 캡처. **실제 tool 이벤트는 `{event:"tool.started/completed", tool:"delegate_task", duration, preview}`** (필드명 `tool`, input/output 없음 — 결과는 message.delta/run.completed.output로 옴). 파서를 실제 형태로 정정(durationSec 추가, name/input/output은 폴백). 앱 프록시 경로(`/api/hermes-runs` → `/events`)로 end-to-end 실측: status=completed, 위임 1건(3.994s), 취합 텍스트 정상. 8 tests + 전체 210 tests pass
 
 ## Phase 5 — 네이티브 칸반 전환 (요구 4, 방식 B) [결정 ①]
 - [x] (Phase 1) Studio 자체 보드 → 여기서 데이터 레이어 스왑 완료(read)

@@ -3,16 +3,18 @@
  *
  * `/v1/runs/{id}/events` SSE를 그룹방 "위임 타임라인"으로 정규화한다.
  *
- * 실제 이벤트 어휘(권위 출처 = 동작 코드 `src/lib/jobs-api.ts` RunEvent + 프록시 주석
- * `hermes-runs.$runId.events.ts`): **`event` 필드 기반**.
+ * 실제 이벤트 어휘(✅ 라이브 캡처로 확정, run_37f6...):
  *   - lifecycle: {event:"run.created"|"run.in_progress"|"run.completed"|"run.failed", error?}
- *   - 텍스트:    {event:"message.delta", delta:"..."}
- *   - 툴:        {event:"tool.started"|"tool.completed", name, input?, output?}
- *   - 위임은 별도 이벤트가 아니라 **name=="delegate_task" 인 tool 이벤트**.
- *     tool.started.input = 위임 인자(JSON), tool.completed.output = 위임 결과(취합).
+ *       run.completed.output = 리더 최종 텍스트(전체), usage 포함.
+ *   - 텍스트:    {event:"message.delta", delta:"..."}  (리더 스트리밍)
+ *   - 추론:      {event:"reasoning.available", text} (타임라인엔 미사용)
+ *   - 툴:        {event:"tool.started", tool:"delegate_task", preview?}
+ *                {event:"tool.completed", tool:"delegate_task", duration, error}
+ *   - ⚠️ 실제 tool 이벤트는 필드명이 **`tool`**(name 아님)이고 **input/output 없음**.
+ *     위임 내용·결과는 tool 이벤트가 아니라 리더의 message.delta / run.completed.output로 온다.
+ *     → 위임 항목은 "발생/완료(+duration) 마커"이고, 결과 텍스트는 assistantText에 누적.
  *
- * (참고: PHASE0-VERIFICATION 문서는 OpenAI Responses 스타일을 적었으나, 실제 동작
- *  코드는 위 event-field 어휘다. 둘 다 방어적으로 처리 — 라이브 캡처 후 확정.)
+ * (PHASE0 문서의 OpenAI Responses 스타일 + jobs-api의 name/input/output은 폴백으로 유지.)
  *
  * 순수 함수 — 라이브 모델 없이 합성/실측 이벤트로 단위 검증 가능.
  */
@@ -22,14 +24,16 @@ export type RunLifecycle = 'created' | 'in_progress' | 'completed' | 'failed'
 export type DelegationEntry = {
   kind: 'delegation'
   callId: string
-  /** 위임 목표/지시(인자에서 추출) */
+  /** 위임 목표/지시(인자/preview에서 추출, 실제 tool 이벤트엔 없을 수 있음) */
   goal: string | null
   /** 지목된 워커/역할(있으면) */
   target: string | null
   rawArguments: string
   status: 'started' | 'done'
-  /** 위임 결과(취합) */
+  /** 위임 결과(폴백 어휘에만 존재. 실제는 리더 assistantText로 옴) */
   result: string | null
+  /** tool.completed의 소요시간(초) */
+  durationSec: number | null
 }
 
 export type DelegationTimeline = {
@@ -104,16 +108,18 @@ function emptyTimeline(): DelegationTimeline {
 function startDelegation(
   state: DelegationTimeline,
   rawArguments: string,
+  preview: string | null,
 ): DelegationTimeline {
   const { goal, target } = extractGoalTarget(rawArguments)
   const entry: DelegationEntry = {
     kind: 'delegation',
     callId: `d${state.delegations.length}`,
-    goal,
+    goal: goal ?? preview,
     target,
     rawArguments,
     status: 'started',
     result: null,
+    durationSec: null,
   }
   return { ...state, delegations: [...state.delegations, entry] }
 }
@@ -122,8 +128,9 @@ function completeDelegation(
   state: DelegationTimeline,
   rawArguments: string,
   output: string | null,
+  durationSec: number | null,
 ): DelegationTimeline {
-  // call_id가 없는 어휘이므로, 같은 인자의 미완 항목 → 없으면 가장 오래된 미완 항목에 매칭
+  // call_id 없는 어휘 → 같은 인자의 미완 항목, 없으면 가장 오래된 미완 항목에 매칭(FIFO)
   const byArgs = state.delegations.findIndex(
     (d) => d.status === 'started' && d.rawArguments === rawArguments,
   )
@@ -132,7 +139,6 @@ function completeDelegation(
       ? byArgs
       : state.delegations.findIndex((d) => d.status === 'started')
   if (idx < 0) {
-    // started 없이 completed만 온 경우 — 결과만 가진 항목 생성
     const { goal, target } = extractGoalTarget(rawArguments)
     return {
       ...state,
@@ -146,6 +152,7 @@ function completeDelegation(
           rawArguments,
           status: 'done',
           result: output,
+          durationSec,
         },
       ],
     }
@@ -153,9 +160,27 @@ function completeDelegation(
   return {
     ...state,
     delegations: state.delegations.map((d, i) =>
-      i === idx ? { ...d, status: 'done' as const, result: output } : d,
+      i === idx
+        ? {
+            ...d,
+            status: 'done' as const,
+            result: output ?? d.result,
+            durationSec: durationSec ?? d.durationSec,
+          }
+        : d,
     ),
   }
+}
+
+function isDelegateTool(event: RunEvent): boolean {
+  return (
+    asString(event.tool) === DELEGATE_TOOL ||
+    asString(event.name) === DELEGATE_TOOL
+  )
+}
+
+function asNumber(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
 /** 단일 이벤트를 타임라인에 누적(불변 갱신). */
@@ -173,8 +198,18 @@ export function reduceRunEvent(
       case 'run.in_progress':
       case 'run.running':
         return { ...state, status: 'in_progress' }
-      case 'run.completed':
-        return { ...state, status: 'completed' }
+      case 'run.completed': {
+        // run.completed.output = 리더 최종 텍스트(전체). delta 누적이 비었으면 사용.
+        const output = asString(event.output)
+        return {
+          ...state,
+          status: 'completed',
+          assistantText:
+            state.assistantText.length > 0
+              ? state.assistantText
+              : (output ?? ''),
+        }
+      }
       case 'run.failed':
         return { ...state, status: 'failed', error: asString(event.error) }
       case 'message.delta':
@@ -183,16 +218,22 @@ export function reduceRunEvent(
           assistantText: state.assistantText + (asString(event.delta) ?? ''),
         }
       case 'tool.started':
-        if (asString(event.name) === DELEGATE_TOOL) {
-          return startDelegation(state, asString(event.input) ?? '{}')
+        if (isDelegateTool(event)) {
+          // 실제 tool 이벤트엔 input 없음 → preview/없음. 폴백 어휘는 input 사용.
+          return startDelegation(
+            state,
+            asString(event.input) ?? '{}',
+            asString(event.preview),
+          )
         }
         return state
       case 'tool.completed':
-        if (asString(event.name) === DELEGATE_TOOL) {
+        if (isDelegateTool(event)) {
           return completeDelegation(
             state,
             asString(event.input) ?? '{}',
             asString(event.output),
+            asNumber(event.duration),
           )
         }
         return state
@@ -220,9 +261,9 @@ export function reduceRunEvent(
     }
     const rawArguments = asString(item.arguments) ?? '{}'
     if (type === 'response.output_item.added') {
-      return startDelegation(state, rawArguments)
+      return startDelegation(state, rawArguments, null)
     }
-    return completeDelegation(state, rawArguments, null)
+    return completeDelegation(state, rawArguments, null, null)
   }
   return state
 }
