@@ -21,6 +21,7 @@ import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as HelpRouteImport } from './routes/help'
+import { Route as GroupRouteImport } from './routes/group'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -101,7 +102,9 @@ import { Route as ApiKnowledgeSearchRouteImport } from './routes/api/knowledge/s
 import { Route as ApiKnowledgeReadRouteImport } from './routes/api/knowledge/read'
 import { Route as ApiKnowledgeListRouteImport } from './routes/api/knowledge/list'
 import { Route as ApiKnowledgeGraphRouteImport } from './routes/api/knowledge/graph'
+import { Route as ApiHermestalkSearchMessagesRouteImport } from './routes/api/hermestalk/search-messages'
 import { Route as ApiHermestalkAgentsRouteImport } from './routes/api/hermestalk/agents'
+import { Route as ApiHermestalkActiveGatewayRouteImport } from './routes/api/hermestalk/active-gateway'
 import { Route as ApiHermesProxySplatRouteImport } from './routes/api/hermes-proxy/$'
 import { Route as ApiHermesJobsJobIdRouteImport } from './routes/api/hermes-jobs.$jobId'
 import { Route as ApiEventsReplayRouteImport } from './routes/api/events/replay'
@@ -178,6 +181,11 @@ const JobsRoute = JobsRouteImport.update({
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroupRoute = GroupRouteImport.update({
+  id: '/group',
+  path: '/group',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FilesRoute = FilesRouteImport.update({
@@ -580,11 +588,23 @@ const ApiKnowledgeGraphRoute = ApiKnowledgeGraphRouteImport.update({
   path: '/api/knowledge/graph',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHermestalkSearchMessagesRoute =
+  ApiHermestalkSearchMessagesRouteImport.update({
+    id: '/api/hermestalk/search-messages',
+    path: '/api/hermestalk/search-messages',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiHermestalkAgentsRoute = ApiHermestalkAgentsRouteImport.update({
   id: '/api/hermestalk/agents',
   path: '/api/hermestalk/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHermestalkActiveGatewayRoute =
+  ApiHermestalkActiveGatewayRouteImport.update({
+    id: '/api/hermestalk/active-gateway',
+    path: '/api/hermestalk/active-gateway',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiHermesProxySplatRoute = ApiHermesProxySplatRouteImport.update({
   id: '/api/hermes-proxy/$',
   path: '/api/hermes-proxy/$',
@@ -686,6 +706,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/docs': typeof DocsRoute
   '/files': typeof FilesRoute
+  '/group': typeof GroupRoute
   '/help': typeof HelpRoute
   '/jobs': typeof JobsRoute
   '/logs': typeof LogsRoute
@@ -745,7 +766,9 @@ export interface FileRoutesByFullPath {
   '/api/events/replay': typeof ApiEventsReplayRoute
   '/api/hermes-jobs/$jobId': typeof ApiHermesJobsJobIdRoute
   '/api/hermes-proxy/$': typeof ApiHermesProxySplatRoute
+  '/api/hermestalk/active-gateway': typeof ApiHermestalkActiveGatewayRoute
   '/api/hermestalk/agents': typeof ApiHermestalkAgentsRoute
+  '/api/hermestalk/search-messages': typeof ApiHermestalkSearchMessagesRoute
   '/api/knowledge/graph': typeof ApiKnowledgeGraphRoute
   '/api/knowledge/list': typeof ApiKnowledgeListRoute
   '/api/knowledge/read': typeof ApiKnowledgeReadRoute
@@ -798,6 +821,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/docs': typeof DocsRoute
   '/files': typeof FilesRoute
+  '/group': typeof GroupRoute
   '/help': typeof HelpRoute
   '/jobs': typeof JobsRoute
   '/logs': typeof LogsRoute
@@ -856,7 +880,9 @@ export interface FileRoutesByTo {
   '/api/events/replay': typeof ApiEventsReplayRoute
   '/api/hermes-jobs/$jobId': typeof ApiHermesJobsJobIdRoute
   '/api/hermes-proxy/$': typeof ApiHermesProxySplatRoute
+  '/api/hermestalk/active-gateway': typeof ApiHermestalkActiveGatewayRoute
   '/api/hermestalk/agents': typeof ApiHermestalkAgentsRoute
+  '/api/hermestalk/search-messages': typeof ApiHermestalkSearchMessagesRoute
   '/api/knowledge/graph': typeof ApiKnowledgeGraphRoute
   '/api/knowledge/list': typeof ApiKnowledgeListRoute
   '/api/knowledge/read': typeof ApiKnowledgeReadRoute
@@ -910,6 +936,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/docs': typeof DocsRoute
   '/files': typeof FilesRoute
+  '/group': typeof GroupRoute
   '/help': typeof HelpRoute
   '/jobs': typeof JobsRoute
   '/logs': typeof LogsRoute
@@ -969,7 +996,9 @@ export interface FileRoutesById {
   '/api/events/replay': typeof ApiEventsReplayRoute
   '/api/hermes-jobs/$jobId': typeof ApiHermesJobsJobIdRoute
   '/api/hermes-proxy/$': typeof ApiHermesProxySplatRoute
+  '/api/hermestalk/active-gateway': typeof ApiHermestalkActiveGatewayRoute
   '/api/hermestalk/agents': typeof ApiHermestalkAgentsRoute
+  '/api/hermestalk/search-messages': typeof ApiHermestalkSearchMessagesRoute
   '/api/knowledge/graph': typeof ApiKnowledgeGraphRoute
   '/api/knowledge/list': typeof ApiKnowledgeListRoute
   '/api/knowledge/read': typeof ApiKnowledgeReadRoute
@@ -1024,6 +1053,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/docs'
     | '/files'
+    | '/group'
     | '/help'
     | '/jobs'
     | '/logs'
@@ -1083,7 +1113,9 @@ export interface FileRouteTypes {
     | '/api/events/replay'
     | '/api/hermes-jobs/$jobId'
     | '/api/hermes-proxy/$'
+    | '/api/hermestalk/active-gateway'
     | '/api/hermestalk/agents'
+    | '/api/hermestalk/search-messages'
     | '/api/knowledge/graph'
     | '/api/knowledge/list'
     | '/api/knowledge/read'
@@ -1136,6 +1168,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/docs'
     | '/files'
+    | '/group'
     | '/help'
     | '/jobs'
     | '/logs'
@@ -1194,7 +1227,9 @@ export interface FileRouteTypes {
     | '/api/events/replay'
     | '/api/hermes-jobs/$jobId'
     | '/api/hermes-proxy/$'
+    | '/api/hermestalk/active-gateway'
     | '/api/hermestalk/agents'
+    | '/api/hermestalk/search-messages'
     | '/api/knowledge/graph'
     | '/api/knowledge/list'
     | '/api/knowledge/read'
@@ -1247,6 +1282,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/docs'
     | '/files'
+    | '/group'
     | '/help'
     | '/jobs'
     | '/logs'
@@ -1306,7 +1342,9 @@ export interface FileRouteTypes {
     | '/api/events/replay'
     | '/api/hermes-jobs/$jobId'
     | '/api/hermes-proxy/$'
+    | '/api/hermestalk/active-gateway'
     | '/api/hermestalk/agents'
+    | '/api/hermestalk/search-messages'
     | '/api/knowledge/graph'
     | '/api/knowledge/list'
     | '/api/knowledge/read'
@@ -1360,6 +1398,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   DocsRoute: typeof DocsRoute
   FilesRoute: typeof FilesRoute
+  GroupRoute: typeof GroupRoute
   HelpRoute: typeof HelpRoute
   JobsRoute: typeof JobsRoute
   LogsRoute: typeof LogsRoute
@@ -1414,7 +1453,9 @@ export interface RootRouteChildren {
   ApiAgentsAgentIdRoute: typeof ApiAgentsAgentIdRoute
   ApiCrewsCrewIdRoute: typeof ApiCrewsCrewIdRouteWithChildren
   ApiHermesProxySplatRoute: typeof ApiHermesProxySplatRoute
+  ApiHermestalkActiveGatewayRoute: typeof ApiHermestalkActiveGatewayRoute
   ApiHermestalkAgentsRoute: typeof ApiHermestalkAgentsRoute
+  ApiHermestalkSearchMessagesRoute: typeof ApiHermestalkSearchMessagesRoute
   ApiKnowledgeGraphRoute: typeof ApiKnowledgeGraphRoute
   ApiKnowledgeListRoute: typeof ApiKnowledgeListRoute
   ApiKnowledgeReadRoute: typeof ApiKnowledgeReadRoute
@@ -1525,6 +1566,13 @@ declare module '@tanstack/react-router' {
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/group': {
+      id: '/group'
+      path: '/group'
+      fullPath: '/group'
+      preLoaderRoute: typeof GroupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/files': {
@@ -2087,11 +2135,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiKnowledgeGraphRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hermestalk/search-messages': {
+      id: '/api/hermestalk/search-messages'
+      path: '/api/hermestalk/search-messages'
+      fullPath: '/api/hermestalk/search-messages'
+      preLoaderRoute: typeof ApiHermestalkSearchMessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/hermestalk/agents': {
       id: '/api/hermestalk/agents'
       path: '/api/hermestalk/agents'
       fullPath: '/api/hermestalk/agents'
       preLoaderRoute: typeof ApiHermestalkAgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hermestalk/active-gateway': {
+      id: '/api/hermestalk/active-gateway'
+      path: '/api/hermestalk/active-gateway'
+      fullPath: '/api/hermestalk/active-gateway'
+      preLoaderRoute: typeof ApiHermestalkActiveGatewayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/hermes-proxy/$': {
@@ -2360,6 +2422,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   DocsRoute: DocsRoute,
   FilesRoute: FilesRoute,
+  GroupRoute: GroupRoute,
   HelpRoute: HelpRoute,
   JobsRoute: JobsRoute,
   LogsRoute: LogsRoute,
@@ -2414,7 +2477,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentsAgentIdRoute: ApiAgentsAgentIdRoute,
   ApiCrewsCrewIdRoute: ApiCrewsCrewIdRouteWithChildren,
   ApiHermesProxySplatRoute: ApiHermesProxySplatRoute,
+  ApiHermestalkActiveGatewayRoute: ApiHermestalkActiveGatewayRoute,
   ApiHermestalkAgentsRoute: ApiHermestalkAgentsRoute,
+  ApiHermestalkSearchMessagesRoute: ApiHermestalkSearchMessagesRoute,
   ApiKnowledgeGraphRoute: ApiKnowledgeGraphRoute,
   ApiKnowledgeListRoute: ApiKnowledgeListRoute,
   ApiKnowledgeReadRoute: ApiKnowledgeReadRoute,
