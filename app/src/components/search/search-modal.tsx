@@ -7,8 +7,10 @@ import {
   FlashIcon,
   LanguageSkillIcon,
   ListViewIcon,
+  Message01Icon,
 } from '@hugeicons/core-free-icons'
 import { AnimatePresence, motion } from 'motion/react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -51,6 +53,14 @@ const RESULT_LIMITS = {
   total: 80,
 } as const
 
+type MessageHitDto = {
+  id: number
+  sessionId: string
+  role: string
+  snippet: string
+  timestamp: number
+}
+
 function includesQuery(value: string, query: string) {
   return value.toLowerCase().includes(query.toLowerCase())
 }
@@ -78,6 +88,22 @@ export function SearchModal() {
 
   // Real data (Phase 3.2)
   const { sessions, files, skills } = useSearchData(scope)
+
+  // HermesTalk Phase 3: 메시지 전문검색(state.db FTS). chats/all 스코프에서 합침.
+  const includeMessages = scope === 'all' || scope === 'chats'
+  const messageSearch = useQuery({
+    queryKey: ['hermestalk', 'search-messages', deferredQuery],
+    enabled: includeMessages && deferredQuery.trim().length > 0,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/hermestalk/search-messages?q=${encodeURIComponent(deferredQuery.trim())}`,
+      )
+      if (!res.ok) return [] as Array<MessageHitDto>
+      const data = (await res.json()) as { hits?: Array<MessageHitDto> }
+      return data.hits ?? []
+    },
+  })
   const searchableFiles = useMemo(
     () => files.filter((entry) => entry.type === 'file'),
     [files],
@@ -218,6 +244,30 @@ export function SearchModal() {
       },
     }))
 
+    // HermesTalk Phase 3: 메시지 전문검색 결과(state.db FTS)
+    const messageResults: Array<SearchResultItemData> = includeMessages
+      ? (messageSearch.data ?? []).map<SearchResultItemData>((hit) => ({
+          id: `msg-${hit.id}`,
+          scope: 'chats',
+          icon: (
+            <HugeiconsIcon icon={Message01Icon} size={20} strokeWidth={1.5} />
+          ),
+          title: hit.snippet.replace(/\s+/g, ' ').slice(0, 80) || '(메시지)',
+          snippet: `${hit.role} · ${hit.sessionId}`,
+          meta: hit.timestamp
+            ? new Date(hit.timestamp).toLocaleString()
+            : '',
+          badge: 'Message',
+          onSelect: () => {
+            closeModal()
+            navigate({
+              to: '/chat/$sessionKey',
+              params: { sessionKey: hit.sessionId },
+            })
+          },
+        }))
+      : []
+
     // Real activity data
     const activityResults: Array<SearchResultItemData> = []
 
@@ -265,7 +315,7 @@ export function SearchModal() {
       if (actions.length >= RESULT_LIMITS.actions) break
     }
 
-    if (scope === 'chats') return chats
+    if (scope === 'chats') return [...chats, ...messageResults]
     if (scope === 'files') return fileResults
     if (scope === 'agents') return activityResults
     if (scope === 'skills') return skillResults
@@ -273,6 +323,7 @@ export function SearchModal() {
 
     return [
       ...chats,
+      ...messageResults,
       ...fileResults,
       ...activityResults,
       ...skillResults,
@@ -281,6 +332,8 @@ export function SearchModal() {
   }, [
     closeModal,
     deferredQuery,
+    includeMessages,
+    messageSearch.data,
     navigate,
     quickActions,
     scope,

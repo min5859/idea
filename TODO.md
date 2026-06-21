@@ -37,7 +37,7 @@
 - [x] unread 뱃지 — `unread-store.ts`(useSyncExternalStore+localStorage, friendlyId→lastReadAt). 세션 `updatedAt`>lastReadAt이면 사이드바에 accent dot+bold. 활성 세션은 effect로 항상 읽음 처리(스트리밍 갱신 무시). 클릭 시 markSessionRead. 텔레그램 응답으로 세션 갱신되면 웹에 unread로 뜸(세션 공유 기반)
 - [x] 1:1 real 스트리밍 동작 확인 — 게이트웨이 `/v1/chat/completions` stream SSE 실측(role delta→finish stop→[DONE]). Studio 기본 흐름 그대로 사용(무수정)
   - ⏳ (env) 텔레그램↔웹 세션 연속성은 텔레그램 봇 실사용 필요 — 2번째 환경에서 확인
-- [ ] 메시지 검색(`search-modal.tsx`) 메시지 대상으로 확장 — **보류(블로커 보고)**: api_server에 메시지 전문 검색 엔드포인트 없음(세션 preview만). 전 세션 메시지 클라 수집은 과거 freezing 이슈(use-search-data 주석)로 위험. 게이트웨이 검색 지원 생기거나 별도 인덱스 도입 시 진행. slack 벤치 #3(최후순위)
+- [x] 메시지 검색(`search-modal.tsx`) 메시지 대상으로 확장 — **해결**: 프로필 `state.db`에 `messages_fts`(FTS5) 인덱스가 이미 존재. readonly 단일 MATCH 쿼리로 안전(과거 freezing 회피). 신규 `message-search.ts`(FTS, prefix·따옴표 이스케이프) + `/api/hermestalk/search-messages` 라우트 + search-modal에 Messages 결과(chats/all 스코프). 실측: q=음성→3 hits, 빈 쿼리→0. tsc 0에러
 
 ## Phase 4 — 그룹방 위임 (요구 5, 방식 A) ★하이라이트
 - [x] plan·design (`docs/01-plan`·`docs/02-design`/phase4-group-delegation) — B안(chat group 모드 확장)
