@@ -81,9 +81,9 @@ export function useReadMap(): Record<string, number> {
 /** 세션이 unread인지 판정 (active 세션은 호출부에서 제외) */
 export function isSessionUnread(
   updatedAt: number | null | undefined,
-  readMap: Record<string, number>,
+  reads: Record<string, number>,
   friendlyId: string,
 ): boolean {
   if (typeof updatedAt !== 'number') return false
-  return updatedAt > (readMap[friendlyId] ?? 0)
+  return updatedAt > (reads[friendlyId] ?? 0)
 }

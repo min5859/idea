@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { startRun } from '@/lib/jobs-api'
 import {
-  reduceRunEvent,
-  type DelegationTimeline,
-  type RunEvent,
+  
+  
+  reduceRunEvent
 } from '../delegation-events'
+import type {DelegationTimeline, RunEvent} from '../delegation-events';
+import { startRun } from '@/lib/jobs-api'
 
 /**
  * HermesTalk — 그룹방 위임 런 구독 훅 (Phase 4 do)

@@ -16,7 +16,7 @@ import {
   setActiveGateway,
 } from '../../../server/gateway-capabilities'
 
-function candidateGateways(): string[] {
+function candidateGateways(): Array<string> {
   const raw = process.env.HERMESTALK_GATEWAYS?.trim()
   if (raw) {
     return raw

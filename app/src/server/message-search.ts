@@ -9,10 +9,11 @@ import { createRequire } from 'node:module'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import type Database from 'better-sqlite3'
 
 const _require = createRequire(import.meta.url)
 
-type SqliteDb = import('better-sqlite3').Database
+type SqliteDb = Database.Database
 
 function searchProfile(): string {
   return (
@@ -56,7 +57,7 @@ function toFtsQuery(raw: string): string {
   return tokens.join(' ')
 }
 
-export function searchMessages(query: string, limit = 30): MessageHit[] {
+export function searchMessages(query: string, limit = 30): Array<MessageHit> {
   const q = query.trim()
   if (!q) return []
   const ftsExpr = toFtsQuery(q)
@@ -64,10 +65,11 @@ export function searchMessages(query: string, limit = 30): MessageHit[] {
 
   let db: SqliteDb | null = null
   try {
-    const Database = _require(
-      'better-sqlite3',
-    ) as typeof import('better-sqlite3')
-    db = new Database(stateDbPath(), { readonly: true, fileMustExist: true })
+    const DatabaseCtor = _require('better-sqlite3') as typeof Database
+    db = new DatabaseCtor(stateDbPath(), {
+      readonly: true,
+      fileMustExist: true,
+    })
     const rows = db
       .prepare(
         `SELECT m.id AS id, m.session_id AS sessionId, m.role AS role,

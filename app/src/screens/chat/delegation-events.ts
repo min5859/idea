@@ -42,7 +42,7 @@ export type DelegationTimeline = {
   /** 리더의 누적 텍스트(취합/요약) */
   assistantText: string
   /** 위임 항목들 */
-  delegations: DelegationEntry[]
+  delegations: Array<DelegationEntry>
 }
 
 export type RunEvent = Record<string, unknown>
@@ -62,8 +62,8 @@ export function parseSseData(line: string): RunEvent | null {
 }
 
 /** SSE 텍스트 블록(여러 줄)에서 이벤트 객체들을 뽑아낸다. */
-export function parseSseBlock(text: string): RunEvent[] {
-  const out: RunEvent[] = []
+export function parseSseBlock(text: string): Array<RunEvent> {
+  const out: Array<RunEvent> = []
   for (const line of text.split('\n')) {
     const ev = parseSseData(line)
     if (ev) out.push(ev)
@@ -269,6 +269,6 @@ export function reduceRunEvent(
 }
 
 /** 이벤트 배열을 타임라인으로 폴드. */
-export function reduceRunEvents(events: RunEvent[]): DelegationTimeline {
+export function reduceRunEvents(events: Array<RunEvent>): DelegationTimeline {
   return events.reduce(reduceRunEvent, emptyTimeline())
 }

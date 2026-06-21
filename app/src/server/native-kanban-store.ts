@@ -12,11 +12,12 @@ import { createRequire } from 'node:module'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import type Database from 'better-sqlite3'
 import type { HermesTask, TaskColumn, TaskPriority } from '../types/task'
 
 const _require = createRequire(import.meta.url)
 
-type SqliteDb = import('better-sqlite3').Database
+type SqliteDb = Database.Database
 
 function kanbanProfile(): string {
   return (
@@ -53,7 +54,7 @@ function columnForStatus(status: string): TaskColumn {
 }
 
 // Studio 컬럼 → 매칭되는 네이티브 status들(필터 역매핑)
-const COLUMN_TO_STATUSES: Record<TaskColumn, string[]> = {
+const COLUMN_TO_STATUSES: Record<TaskColumn, Array<string>> = {
   backlog: ['triage'],
   todo: ['todo', 'ready'],
   in_progress: ['running'],
@@ -107,10 +108,11 @@ const SELECT_COLS =
 function withDb<T>(fn: (db: SqliteDb) => T): T | null {
   let db: SqliteDb | null = null
   try {
-    const Database = _require(
-      'better-sqlite3',
-    ) as typeof import('better-sqlite3')
-    db = new Database(kanbanDbPath(), { readonly: true, fileMustExist: true })
+    const DatabaseCtor = _require('better-sqlite3') as typeof Database
+    db = new DatabaseCtor(kanbanDbPath(), {
+      readonly: true,
+      fileMustExist: true,
+    })
     return fn(db)
   } catch {
     return null
@@ -128,9 +130,9 @@ export type NativeTaskFilter = {
   assignee?: string
 }
 
-export function listNativeTasks(filter?: NativeTaskFilter): HermesTask[] {
+export function listNativeTasks(filter?: NativeTaskFilter): Array<HermesTask> {
   const rows = withDb((db) => {
-    const where: string[] = []
+    const where: Array<string> = []
     const params: Array<string> = []
     if (filter?.column) {
       const statuses = COLUMN_TO_STATUSES[filter.column]
@@ -145,7 +147,7 @@ export function listNativeTasks(filter?: NativeTaskFilter): HermesTask[] {
       `SELECT ${SELECT_COLS} FROM tasks` +
       (where.length ? ` WHERE ${where.join(' AND ')}` : '') +
       ' ORDER BY priority DESC, created_at DESC'
-    return db.prepare(sql).all(...params) as NativeRow[]
+    return db.prepare(sql).all(...params) as Array<NativeRow>
   })
   if (!rows) return []
   return rows.map((row, i) => rowToTask(row, i))

@@ -6,16 +6,16 @@ import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
 import { isAuthenticated } from '../../../server/auth-middleware'
 import { requireJsonContentType } from '../../../server/rate-limit'
-import { listTasks, createTask } from '../../../server/task-store'
+import { createTask, listTasks } from '../../../server/task-store'
 import {
   isNativeKanbanAvailable,
   listNativeTasks,
 } from '../../../server/native-kanban-store'
 import type { TaskColumn, TaskPriority, TaskSourceType } from '../../../types/task'
 
-const VALID_COLUMNS: TaskColumn[] = ['backlog', 'todo', 'in_progress', 'review', 'done']
-const VALID_PRIORITIES: TaskPriority[] = ['high', 'medium', 'low']
-const VALID_SOURCES: TaskSourceType[] = ['manual', 'conductor', 'crew']
+const VALID_COLUMNS: Array<TaskColumn> = ['backlog', 'todo', 'in_progress', 'review', 'done']
+const VALID_PRIORITIES: Array<TaskPriority> = ['high', 'medium', 'low']
+const VALID_SOURCES: Array<TaskSourceType> = ['manual', 'conductor', 'crew']
 
 export const Route = createFileRoute('/api/tasks/')({
   server: {
@@ -89,19 +89,19 @@ export const Route = createFileRoute('/api/tasks/')({
           input.priority = body.priority as TaskPriority
         }
         if (typeof body.assignee === 'string' || body.assignee === null) {
-          input.assignee = body.assignee as string | null
+          input.assignee = body.assignee
         }
         if (Array.isArray(body.tags)) {
-          input.tags = (body.tags as unknown[]).filter((t) => typeof t === 'string') as string[]
+          input.tags = (body.tags as Array<unknown>).filter((t) => typeof t === 'string')
         }
         if (typeof body.dueDate === 'string' || body.dueDate === null) {
-          input.dueDate = body.dueDate as string | null
+          input.dueDate = body.dueDate
         }
         if (typeof body.sourceType === 'string' && VALID_SOURCES.includes(body.sourceType as TaskSourceType)) {
           input.sourceType = body.sourceType as TaskSourceType
         }
         if (typeof body.sourceId === 'string' || body.sourceId === null) {
-          input.sourceId = body.sourceId as string | null
+          input.sourceId = body.sourceId
         }
         if (typeof body.createdBy === 'string') input.createdBy = body.createdBy
 

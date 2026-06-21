@@ -3,12 +3,12 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDown01Icon } from '@hugeicons/core-free-icons'
 import { memo, useEffect, useMemo } from 'react'
-import { SessionItem } from './session-item'
 import {
   isSessionUnread,
   markSessionRead,
   useReadMap,
 } from '../../unread-store'
+import { SessionItem } from './session-item'
 import type { SessionMeta } from '../../types'
 import {
   Collapsible,

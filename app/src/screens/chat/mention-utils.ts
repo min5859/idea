@@ -20,9 +20,9 @@ export function readMentionQuery(value: string): string | null {
 
 /** 후보명들을 query(대소문자 무시 prefix/포함)로 필터. */
 export function filterMentionCandidates(
-  candidates: string[],
+  candidates: Array<string>,
   query: string,
-): string[] {
+): Array<string> {
   const q = query.trim().toLowerCase()
   if (!q) return candidates
   return candidates.filter((name) => name.toLowerCase().includes(q))
@@ -41,8 +41,8 @@ export function applyMention(value: string, name: string): string {
 }
 
 /** 텍스트에서 멘션된 이름들을 추출(중복 제거, 순서 유지). */
-export function extractMentions(value: string): string[] {
-  const out: string[] = []
+export function extractMentions(value: string): Array<string> {
+  const out: Array<string> = []
   const seen = new Set<string>()
   const re = /(?:^|\s)@([A-Za-z0-9_\-:.]+)/g
   let m: RegExpExecArray | null
