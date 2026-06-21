@@ -40,10 +40,12 @@
 - [ ] 메시지 검색(`search-modal.tsx`) 메시지 대상으로 확장 — **보류(블로커 보고)**: api_server에 메시지 전문 검색 엔드포인트 없음(세션 preview만). 전 세션 메시지 클라 수집은 과거 freezing 이슈(use-search-data 주석)로 위험. 게이트웨이 검색 지원 생기거나 별도 인덱스 도입 시 진행. slack 벤치 #3(최후순위)
 
 ## Phase 4 — 그룹방 위임 (요구 5, 방식 A) ★하이라이트
-- [ ] `/chat/$sessionKey`에 group 세션 타입 추가 → 리더 프로필로 라우팅
-- [ ] `delegate_task` 위임 이벤트(`/v1/runs/{id}/events`)를 `message-item.tsx` 카드 → **위임 말풍선** 스타일로
+- [x] plan·design (`docs/01-plan`·`docs/02-design`/phase4-group-delegation) — B안(chat group 모드 확장)
+- [x] **위임 이벤트 파서 (do 핵심, 모델 무관)** — `delegation-events.ts`: Responses SSE → 위임 타임라인 정규화(lifecycle `event` 필드, `delegate_task` function_call, output_text.delta, function_call_output 결과). 단위 검증 `delegation-events.test.ts` 5 pass(합성 위임 흐름 + 실제 캡처 run.failed). 라이브 캡처로 필드 미세조정 여지(모듈 isolated)
+- [ ] `/chat/$sessionKey` group 세션 타입 + `/v1/runs` 라우팅 (do, **모델 재인증 후 라이브 검증**)
+- [ ] `delegate_task`를 `message-item.tsx` 위임 말풍선으로 (do, 파서 출력 렌더 — 재인증 후)
 - [ ] @mention으로 특정 서브봇 지목(`chat-composer.tsx`)
-- [ ] 리더 위임 → 서브봇 진행 → 취합 흐름이 한 화면에 시간순으로 보이는지 확인
+- [ ] 리더 위임 → 서브봇 진행 → 취합 흐름 시간순 (check, **모델 재인증 후 end-to-end real**)
 
 ## Phase 5 — 네이티브 칸반 전환 (요구 4, 방식 B) [결정 ①]
 - [x] (Phase 1) Studio 자체 보드 → 여기서 데이터 레이어 스왑 완료(read)
