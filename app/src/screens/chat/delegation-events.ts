@@ -1,16 +1,20 @@
 /**
  * HermesTalk — 위임(delegate_task) 런 이벤트 파서 (Phase 4 do, 모델 무관 핵심)
  *
- * `/v1/runs/{id}/events` SSE를 그룹방 "위임 타임라인"으로 정규화한다. Hermes는
- * OpenAI Responses 스타일 + lifecycle은 `{"event": "..."}` 필드로 낸다(실측: run.failed).
- *   - lifecycle: {"event":"run.created"|"run.completed"|"run.failed", error?}
- *   - 토큰:      {"type":"response.output_text.delta", "delta":"..."}
- *   - 툴콜:      {"type":"response.output_item.added"|"done", "item":{type:"function_call", name, arguments, ...}}
- *   - 결과:      {"type":"response.function_call_output", ...} 또는 item.type=="function_call_output"
- *   - 위임은 별도 이벤트가 아니라 name=="delegate_task" 인 function_call. (PHASE0-VERIFICATION §4)
+ * `/v1/runs/{id}/events` SSE를 그룹방 "위임 타임라인"으로 정규화한다.
  *
- * 순수 함수로 분리 — 라이브 모델 없이 합성/실측 이벤트로 단위 검증 가능.
- * (라이브 delegate_task 캡처로 필드 미세조정 여지. 본 모듈만 isolated.)
+ * 실제 이벤트 어휘(권위 출처 = 동작 코드 `src/lib/jobs-api.ts` RunEvent + 프록시 주석
+ * `hermes-runs.$runId.events.ts`): **`event` 필드 기반**.
+ *   - lifecycle: {event:"run.created"|"run.in_progress"|"run.completed"|"run.failed", error?}
+ *   - 텍스트:    {event:"message.delta", delta:"..."}
+ *   - 툴:        {event:"tool.started"|"tool.completed", name, input?, output?}
+ *   - 위임은 별도 이벤트가 아니라 **name=="delegate_task" 인 tool 이벤트**.
+ *     tool.started.input = 위임 인자(JSON), tool.completed.output = 위임 결과(취합).
+ *
+ * (참고: PHASE0-VERIFICATION 문서는 OpenAI Responses 스타일을 적었으나, 실제 동작
+ *  코드는 위 event-field 어휘다. 둘 다 방어적으로 처리 — 라이브 캡처 후 확정.)
+ *
+ * 순수 함수 — 라이브 모델 없이 합성/실측 이벤트로 단위 검증 가능.
  */
 
 export type RunLifecycle = 'created' | 'in_progress' | 'completed' | 'failed'
@@ -18,13 +22,13 @@ export type RunLifecycle = 'created' | 'in_progress' | 'completed' | 'failed'
 export type DelegationEntry = {
   kind: 'delegation'
   callId: string
-  /** delegate_task arguments에서 추출한 위임 목표/지시 */
+  /** 위임 목표/지시(인자에서 추출) */
   goal: string | null
   /** 지목된 워커/역할(있으면) */
   target: string | null
   rawArguments: string
   status: 'started' | 'done'
-  /** function_call_output로 도착한 결과(취합) */
+  /** 위임 결과(취합) */
   result: string | null
 }
 
@@ -33,7 +37,7 @@ export type DelegationTimeline = {
   error: string | null
   /** 리더의 누적 텍스트(취합/요약) */
   assistantText: string
-  /** 위임 항목들(call_id 기준 dedupe) */
+  /** 위임 항목들 */
   delegations: DelegationEntry[]
 }
 
@@ -47,9 +51,7 @@ export function parseSseData(line: string): RunEvent | null {
   if (!payload || payload === '[DONE]') return null
   try {
     const parsed = JSON.parse(payload) as unknown
-    return parsed && typeof parsed === 'object'
-      ? (parsed as RunEvent)
-      : null
+    return parsed && typeof parsed === 'object' ? (parsed as RunEvent) : null
   } catch {
     return null
   }
@@ -68,6 +70,8 @@ export function parseSseBlock(text: string): RunEvent[] {
 function asString(v: unknown): string | null {
   return typeof v === 'string' && v.length > 0 ? v : null
 }
+
+const DELEGATE_TOOL = 'delegate_task'
 
 function extractGoalTarget(rawArguments: string): {
   goal: string | null
@@ -97,8 +101,61 @@ function emptyTimeline(): DelegationTimeline {
   return { status: 'created', error: null, assistantText: '', delegations: [] }
 }
 
-function isFunctionCallItem(item: Record<string, unknown>): boolean {
-  return item.type === 'function_call' && item.name === 'delegate_task'
+function startDelegation(
+  state: DelegationTimeline,
+  rawArguments: string,
+): DelegationTimeline {
+  const { goal, target } = extractGoalTarget(rawArguments)
+  const entry: DelegationEntry = {
+    kind: 'delegation',
+    callId: `d${state.delegations.length}`,
+    goal,
+    target,
+    rawArguments,
+    status: 'started',
+    result: null,
+  }
+  return { ...state, delegations: [...state.delegations, entry] }
+}
+
+function completeDelegation(
+  state: DelegationTimeline,
+  rawArguments: string,
+  output: string | null,
+): DelegationTimeline {
+  // call_id가 없는 어휘이므로, 같은 인자의 미완 항목 → 없으면 가장 오래된 미완 항목에 매칭
+  const byArgs = state.delegations.findIndex(
+    (d) => d.status === 'started' && d.rawArguments === rawArguments,
+  )
+  const idx =
+    byArgs >= 0
+      ? byArgs
+      : state.delegations.findIndex((d) => d.status === 'started')
+  if (idx < 0) {
+    // started 없이 completed만 온 경우 — 결과만 가진 항목 생성
+    const { goal, target } = extractGoalTarget(rawArguments)
+    return {
+      ...state,
+      delegations: [
+        ...state.delegations,
+        {
+          kind: 'delegation',
+          callId: `d${state.delegations.length}`,
+          goal,
+          target,
+          rawArguments,
+          status: 'done',
+          result: output,
+        },
+      ],
+    }
+  }
+  return {
+    ...state,
+    delegations: state.delegations.map((d, i) =>
+      i === idx ? { ...d, status: 'done' as const, result: output } : d,
+    ),
+  }
 }
 
 /** 단일 이벤트를 타임라인에 누적(불변 갱신). */
@@ -106,81 +163,67 @@ export function reduceRunEvent(
   state: DelegationTimeline,
   event: RunEvent,
 ): DelegationTimeline {
-  // 1) lifecycle (event 필드)
-  const lifecycle = asString(event.event)
-  if (lifecycle) {
-    if (lifecycle === 'run.created' || lifecycle === 'run.queued') {
-      return { ...state, status: 'created' }
+  // ── 1차: event-field 어휘(실제 게이트웨이) ──────────────────────────
+  const ev = asString(event.event)
+  if (ev) {
+    switch (ev) {
+      case 'run.created':
+      case 'run.queued':
+        return { ...state, status: 'created' }
+      case 'run.in_progress':
+      case 'run.running':
+        return { ...state, status: 'in_progress' }
+      case 'run.completed':
+        return { ...state, status: 'completed' }
+      case 'run.failed':
+        return { ...state, status: 'failed', error: asString(event.error) }
+      case 'message.delta':
+        return {
+          ...state,
+          assistantText: state.assistantText + (asString(event.delta) ?? ''),
+        }
+      case 'tool.started':
+        if (asString(event.name) === DELEGATE_TOOL) {
+          return startDelegation(state, asString(event.input) ?? '{}')
+        }
+        return state
+      case 'tool.completed':
+        if (asString(event.name) === DELEGATE_TOOL) {
+          return completeDelegation(
+            state,
+            asString(event.input) ?? '{}',
+            asString(event.output),
+          )
+        }
+        return state
+      default:
+        return state
     }
-    if (lifecycle === 'run.in_progress' || lifecycle === 'run.running') {
-      return { ...state, status: 'in_progress' }
-    }
-    if (lifecycle === 'run.completed') {
-      return { ...state, status: 'completed' }
-    }
-    if (lifecycle === 'run.failed') {
-      return { ...state, status: 'failed', error: asString(event.error) }
-    }
-    return state
   }
 
+  // ── 2차(폴백): OpenAI Responses 스타일(type-field) ──────────────────
   const type = asString(event.type)
   if (!type) return state
-
-  // 2) 리더 텍스트 델타
   if (type === 'response.output_text.delta') {
-    const delta = asString(event.delta) ?? ''
-    return { ...state, assistantText: state.assistantText + delta }
+    return {
+      ...state,
+      assistantText: state.assistantText + (asString(event.delta) ?? ''),
+    }
   }
-
-  // 3) function_call 아이템 added/done → 위임
   if (
     type === 'response.output_item.added' ||
     type === 'response.output_item.done'
   ) {
     const item = (event.item ?? {}) as Record<string, unknown>
-    if (!isFunctionCallItem(item)) return state
-    const callId =
-      asString(item.call_id) ?? asString(item.id) ?? `call-${state.delegations.length}`
-    const rawArguments = asString(item.arguments) ?? '{}'
-    const { goal, target } = extractGoalTarget(rawArguments)
-    const status = type === 'response.output_item.done' ? 'done' : 'started'
-
-    const existingIdx = state.delegations.findIndex((d) => d.callId === callId)
-    const entry: DelegationEntry = {
-      kind: 'delegation',
-      callId,
-      goal,
-      target,
-      rawArguments,
-      status,
-      result:
-        existingIdx >= 0 ? state.delegations[existingIdx].result : null,
+    if (item.type !== 'function_call' || item.name !== DELEGATE_TOOL) {
+      return state
     }
-    const delegations =
-      existingIdx >= 0
-        ? state.delegations.map((d, i) => (i === existingIdx ? entry : d))
-        : [...state.delegations, entry]
-    return { ...state, delegations }
+    const rawArguments = asString(item.arguments) ?? '{}'
+    if (type === 'response.output_item.added') {
+      return startDelegation(state, rawArguments)
+    }
+    return completeDelegation(state, rawArguments, null)
   }
-
-  // 4) function_call_output → 위임 결과(취합)
-  if (
-    type === 'response.function_call_output' ||
-    (event.item as Record<string, unknown> | undefined)?.type ===
-      'function_call_output'
-  ) {
-    const item = (event.item ?? event) as Record<string, unknown>
-    const callId = asString(item.call_id) ?? asString(item.id)
-    const output =
-      asString(item.output) ?? asString(item.result) ?? asString(event.output)
-    if (!callId) return state
-    const delegations = state.delegations.map((d) =>
-      d.callId === callId ? { ...d, result: output, status: 'done' as const } : d,
-    )
-    return { ...state, delegations }
-  }
-
   return state
 }
 

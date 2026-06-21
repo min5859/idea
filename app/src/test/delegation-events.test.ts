@@ -11,7 +11,7 @@ describe('parseSseData', () => {
       event: 'run.created',
     })
   })
-  it('ignores [DONE], comments, non-data', () => {
+  it('ignores [DONE], comments, non-data, bad json', () => {
     expect(parseSseData('data: [DONE]')).toBeNull()
     expect(parseSseData(': stream closed')).toBeNull()
     expect(parseSseData('event: foo')).toBeNull()
@@ -21,7 +21,6 @@ describe('parseSseData', () => {
 
 describe('reduceRunEvents — real captured run.failed', () => {
   it('captures failed status + error (Codex token)', () => {
-    // 실제 캡처(scratchpad/run-events.txt)
     const block = `data: {"event": "run.failed", "run_id": "run_b56d143396574113aad7e8d6861d8e34", "timestamp": 1782031582.382622, "error": "Codex refresh token was already consumed by another client (e.g. Codex CLI or VS Code extension)."}\n\n: stream closed\n`
     const timeline = reduceRunEvents(parseSseBlock(block))
     expect(timeline.status).toBe('failed')
@@ -30,87 +29,87 @@ describe('reduceRunEvents — real captured run.failed', () => {
   })
 })
 
-describe('reduceRunEvents — synthetic delegate_task flow', () => {
-  it('builds a delegation timeline: 2 위임 + 결과 + 취합', () => {
+describe('reduceRunEvents — real event-field vocabulary (jobs-api RunEvent)', () => {
+  it('tool.started/completed(delegate_task) + message.delta → 타임라인', () => {
+    // 실제 게이트웨이 어휘: {event, name, input, output, delta}
     const events = [
-      { event: 'run.created' },
-      { event: 'run.in_progress' },
+      { event: 'run.created', run_id: 'r1', timestamp: 1 },
+      { event: 'run.in_progress', run_id: 'r1', timestamp: 2 },
       {
-        type: 'response.output_item.added',
-        item: {
-          type: 'function_call',
-          name: 'delegate_task',
-          call_id: 'c1',
-          arguments: '{"goal":"say hello in French","assignee":"fr-worker"}',
-        },
+        event: 'tool.started',
+        run_id: 'r1',
+        timestamp: 3,
+        name: 'delegate_task',
+        input: '{"goal":"say hello in French","assignee":"fr-worker"}',
       },
       {
-        type: 'response.output_item.added',
-        item: {
-          type: 'function_call',
-          name: 'delegate_task',
-          call_id: 'c2',
-          arguments: '{"goal":"say hello in Korean","role":"ko-worker"}',
-        },
+        event: 'tool.started',
+        run_id: 'r1',
+        timestamp: 4,
+        name: 'delegate_task',
+        input: '{"goal":"say hello in Korean","role":"ko-worker"}',
       },
-      // 다른 툴콜은 무시되어야 함
+      // 비-delegate 툴은 무시
+      { event: 'tool.started', run_id: 'r1', timestamp: 5, name: 'web_search', input: '{}' },
       {
-        type: 'response.output_item.added',
-        item: { type: 'function_call', name: 'web_search', call_id: 'x', arguments: '{}' },
+        event: 'tool.completed',
+        run_id: 'r1',
+        timestamp: 6,
+        name: 'delegate_task',
+        input: '{"goal":"say hello in French","assignee":"fr-worker"}',
+        output: 'Bonjour',
       },
       {
-        type: 'response.function_call_output',
-        item: { call_id: 'c1', output: 'Bonjour' },
+        event: 'tool.completed',
+        run_id: 'r1',
+        timestamp: 7,
+        name: 'delegate_task',
+        input: '{"goal":"say hello in Korean","role":"ko-worker"}',
+        output: '안녕하세요',
       },
-      {
-        type: 'response.output_item.done',
-        item: {
-          type: 'function_call',
-          name: 'delegate_task',
-          call_id: 'c2',
-          arguments: '{"goal":"say hello in Korean","role":"ko-worker"}',
-        },
-      },
-      { type: 'response.function_call_output', item: { call_id: 'c2', output: '안녕하세요' } },
-      { type: 'response.output_text.delta', delta: 'Both ' },
-      { type: 'response.output_text.delta', delta: 'done.' },
-      { event: 'run.completed' },
+      { event: 'message.delta', run_id: 'r1', timestamp: 8, delta: 'Both ' },
+      { event: 'message.delta', run_id: 'r1', timestamp: 9, delta: 'done.' },
+      { event: 'run.completed', run_id: 'r1', timestamp: 10 },
     ]
     const t = reduceRunEvents(events)
 
     expect(t.status).toBe('completed')
     expect(t.error).toBeNull()
     expect(t.assistantText).toBe('Both done.')
-
-    // delegate_task 2개만 (web_search 제외), call_id dedupe
     expect(t.delegations).toHaveLength(2)
 
-    const c1 = t.delegations.find((d) => d.callId === 'c1')!
-    expect(c1.goal).toBe('say hello in French')
-    expect(c1.target).toBe('fr-worker')
-    expect(c1.result).toBe('Bonjour')
-    expect(c1.status).toBe('done')
+    const fr = t.delegations.find((d) => d.goal === 'say hello in French')!
+    expect(fr.target).toBe('fr-worker')
+    expect(fr.result).toBe('Bonjour')
+    expect(fr.status).toBe('done')
 
-    const c2 = t.delegations.find((d) => d.callId === 'c2')!
-    expect(c2.goal).toBe('say hello in Korean')
-    expect(c2.target).toBe('ko-worker')
-    expect(c2.result).toBe('안녕하세요')
-    expect(c2.status).toBe('done')
+    const ko = t.delegations.find((d) => d.goal === 'say hello in Korean')!
+    expect(ko.target).toBe('ko-worker')
+    expect(ko.result).toBe('안녕하세요')
+    expect(ko.status).toBe('done')
   })
 
-  it('added 후 done 갱신 시 중복 생성하지 않는다', () => {
-    const events = [
-      {
-        type: 'response.output_item.added',
-        item: { type: 'function_call', name: 'delegate_task', call_id: 'c1', arguments: '{"goal":"g"}' },
-      },
-      {
-        type: 'response.output_item.done',
-        item: { type: 'function_call', name: 'delegate_task', call_id: 'c1', arguments: '{"goal":"g"}' },
-      },
-    ]
-    const t = reduceRunEvents(events)
+  it('completed without started still records result', () => {
+    const t = reduceRunEvents([
+      { event: 'tool.completed', name: 'delegate_task', input: '{"goal":"g"}', output: 'R' },
+    ])
     expect(t.delegations).toHaveLength(1)
     expect(t.delegations[0].status).toBe('done')
+    expect(t.delegations[0].result).toBe('R')
+  })
+})
+
+describe('reduceRunEvents — Responses-style fallback', () => {
+  it('handles response.output_item + output_text.delta', () => {
+    const t = reduceRunEvents([
+      {
+        type: 'response.output_item.added',
+        item: { type: 'function_call', name: 'delegate_task', arguments: '{"goal":"g"}' },
+      },
+      { type: 'response.output_text.delta', delta: 'hi' },
+    ])
+    expect(t.delegations).toHaveLength(1)
+    expect(t.delegations[0].goal).toBe('g')
+    expect(t.assistantText).toBe('hi')
   })
 })
