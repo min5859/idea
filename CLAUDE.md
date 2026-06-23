@@ -109,5 +109,5 @@ Studio chat 화면은 이미 풍부(세션 사이드바·말풍선·composer·Co
 ## 9. 참고 프로젝트
 
 - `JPeetz/Hermes-Studio` — **포크 베이스.** TanStack Start, capability 감지, `/v1/runs` 위임, 칸반 UI, cron, approvals, crews/conductor.
-- `nesquena/hermes-webui` — Hermes 내부 직접 import(강결합·Python). 코드가 아니라 UX 아이디어만 차용(세션관리·tool카드·토큰/비용 링·메모리 편집·WebAuthn).
+- `nesquena/hermes-webui` — Hermes 내부 직접 import(강결합·Python). 코드가 아니라 UX 아이디어만 차용(세션관리·tool카드·토큰/비용 링·메모리 편집·WebAuthn). 실행·사용·비교는 `docs/HERMES-WEBUI.md`. (로컬 `/Users/wooki/project/git/wk/hermes-webui`, :8787)
 - Hermes 공식 문서: [Profiles](https://hermes-agent.nousresearch.com/docs/user-guide/profiles) · [Subagent Delegation](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation) · [Kanban](https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban) · [Telegram](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram/).

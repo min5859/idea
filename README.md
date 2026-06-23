@@ -226,3 +226,4 @@ HermesTalk는 **8642 api_server**가 주 연동이다. 칸반/메시지검색은
 - `TODO.md` — Phase별 진행 상황
 - `PHASE0-VERIFICATION.md` — 게이트웨이 연동 실측 기록
 - `app/HERMESTALK-FORK.md` — 포크 본체 메모
+- `docs/HERMES-WEBUI.md` — 대안 UI(hermes-webui) 설치·실행·사용법 + HermesTalk 비교
