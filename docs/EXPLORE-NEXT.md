@@ -20,8 +20,11 @@
 - **확인 위치**: webui(:8787) news 프로필 전환 → Sessions(api_server 세션) / Tasks 패널. 출력은 `~/.hermes/profiles/news/cron/output/`.
 - 남은 것: 텔레그램 푸시 원하면 봇 토큰 발급 후 `--deliver telegram`으로 edit.
 
-## 4. kanban 파이프라인: architect → designer → coder → reviewer → reporter
-- 방식 B(네이티브 칸반 협업)에 정확히 맞는 시나리오.
+## 4. kanban 파이프라인: architect → coder → reviewer — ✅ PoC 완료(3역할)
+- **실증됨(2026-07-04)**: 프로필 architect/coder/reviewer 생성(clone+auth공유+SOUL 차별화) → 공유 보드에 의존성 체인 태스크(`link parent child`) → `dispatch`가 역할별 워커 spawn → 핸드오프. gcd 함수 데모: architect가 DESIGN.md → coder가 gcd.py+테스트(TDD 12 passed)+IMPLEMENTATION.md → reviewer가 REVIEW.md(PASS, 파일:라인 근거). 레시피는 `docs/AI-GUIDE.md §4.4`.
+- 배운 점: 워커가 완료 후 "review-required" self-block(needs_input) 가능 → `unblock`+`complete`로 승인. 워커는 게이트웨이 불필요(dispatch가 spawn).
+- 남은 확장: designer/reporter 추가(5역할), 게이트웨이 내장 디스패처 자동화.
+- 원 설계 메모(방식 B):
 - **각 역할 = 프로필(assignee).** `hermes kanban create --assignee architect ...` 식으로 태스크를 역할에 배정하면 디스패처가 해당 프로필 게이트웨이를 기동해 claim·처리, 부모-자식 의존성/핸드오프 지원.
   - 참고: 예전에 삭제한 `pm/frontend-eng/reviewer/tauri-backend`가 **바로 이 패턴**(칸반이 역할별 워커 프로필로 만든 것)이었음.
 - 새 프로필 필요? → 역할별로 만드는 게 정석(각자 SOUL.md로 페르소나 차별화). 단순하게는 1개 프로필이 여러 역할 겸임도 가능(권장 X — 차별화가 협업 품질).
