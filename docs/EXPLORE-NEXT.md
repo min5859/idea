@@ -13,11 +13,12 @@
 - ✅ **확인됨(2026-06)**: maccoder·news·trading 모두 running. `hermes gateway status` 또는 4개 포트 `/health`로 상시 확인.
 - launchd 자동기동: `ai.hermes.gateway-{maccoder,news,trading}` + `com.hermestalk.webui` 등록 → 재부팅 자동 복구.
 
-## 3. news agent 데일리 cron — 어디에 기록?
-- ⚠️ **아직 cron 잡 없음** — 현재 자동 수집/기록 **안 됨**. 프로필·페르소나만 존재.
-- 만들면: `hermes --profile news cron create ...` → 출력은 `~/.hermes/profiles/news/cron/output/`에 누적, 텔레그램 설정 시 푸시.
-- 남은 결정: ① 실행 시각(예 08:00) ② 딜리버리(텔레그램 봇 토큰 필요 / 웹만) ③ 프롬프트(4개 분야 브리핑).
-- webui **Tasks 패널**에서 GUI로 잡 생성/실행/이력 확인도 가능.
+## 3. news agent 데일리 cron — ✅ 완료
+- **잡 생성됨**: `daily-news-brief` (id `1d128439bd39`), **매일 19:00**(`0 19 * * *`), `--deliver local`.
+- 프롬프트: 4개 분야(기술/AI·금융/증시·개발자/스타트업·한국 일반뉴스) 각 5개 + 출처·링크 + "오늘의 한 줄".
+- 라이브 실측: 실제 최신 기사(연합뉴스·전자신문·플래텀·DevClass 등) 4×5개 스크랩 확인.
+- **확인 위치**: webui(:8787) news 프로필 전환 → Sessions(api_server 세션) / Tasks 패널. 출력은 `~/.hermes/profiles/news/cron/output/`.
+- 남은 것: 텔레그램 푸시 원하면 봇 토큰 발급 후 `--deliver telegram`으로 edit.
 
 ## 4. kanban 파이프라인: architect → designer → coder → reviewer → reporter
 - 방식 B(네이티브 칸반 협업)에 정확히 맞는 시나리오.
@@ -33,4 +34,37 @@
 - 프로필별 스킬 특화, 메모리 공유, cron 기반 자동 리포트 등.
 
 ---
-> 진행할 때: 하나씩 골라서 요청하면 그 항목만 통제된 방식으로 세팅. 특히 #3(뉴스 cron)과 #4(칸반 파이프라인)는 바로 착수 가능.
+
+## 6. [분석] hermes-paperclip-adapter + Paperclip — 내 시나리오 적합성
+> https://github.com/NousResearch/hermes-paperclip-adapter (어댑터, MIT, TypeScript)
+> https://github.com/paperclipai/paperclip (본체, **MIT·오픈소스·자체호스팅·무료**)
+
+### 무엇인가
+- **Paperclip** = "AI 에이전트를 회사 직원처럼 운영"하는 오케스트레이션 플랫폼. Node/TS + React + PostgreSQL(로컬 임베디드) + Docker, `npx paperclipai onboard` 로 로컬 :3100 기동.
+  - **조직도(org chart)**: 에이전트에 역할·직함·리포팅 라인·job description 부여.
+  - **직원 = BYO 에이전트**: Claude Code, Codex, OpenClaw, bash, HTTP 봇 — 그리고 **어댑터로 Hermes**.
+  - **목표·태스크**: 모든 작업이 회사 미션까지 추적("why"를 앎). ticket 시스템 + 대화 추적.
+  - **거버넌스/회계**: board 승인, 에이전트 pause/terminate, per-agent 예산 하드스톱, 감사 로그, 비용 추적.
+  - **실행**: heartbeat 스케줄, atomic task checkout(중복작업 방지), 멀티 컴퍼니 데이터 격리.
+- **hermes-paperclip-adapter** = Hermes CLI를 spawn해 Paperclip 태스크를 처리하고 결과를 구조화 transcript로 리포트하는 **다리**. 세션 영속·스킬 동기화·비용 추적·comment 기반 wake.
+
+### 내 시나리오 적합성
+| 내 니즈 | Paperclip 적합성 |
+|---|---|
+| **#4 역할 파이프라인**(architect→designer→coder→reviewer→reporter) | ✅ **매우 적합**. 내가 손으로 짜려던 "역할별 프로필 + 의존성 체인"의 **상위 제품화 버전**. 조직도·리포팅·목표·티켓이 기본 제공 |
+| **#5 멀티에이전트 생산성** | ✅ 정확히 이걸 위한 플랫폼. 예산/거버넌스/감사까지 |
+| **자체호스팅·개인도구** | ✅ MIT·무료·로컬 Postgres·Docker (SaaS 아님) |
+| **Codex 사용** | ✅ 직원으로 Codex/Claude Code/Hermes 다 가능 |
+| **유지보수 최소화** | ⚠️ **주의**: Node+Postgres 스택 하나 더 상시 운영. 이미 게이트웨이 3 + webui + HermesTalk 도는 위에 추가 |
+
+### 결론 / 추천
+- **#4·#5의 정답에 가까움.** architect→…→reporter를 네이티브 칸반으로 손수 짜는 것보다, **Paperclip이 조직도·역할·목표·거버넌스·비용통제를 기본 제공**하므로 훨씬 완성형. Hermes agent들(maccoder/news/trading 또는 역할 전용)을 어댑터로 "직원"으로 붙이면 됨.
+- **트레이드오프**: (1) Node/Postgres 서비스 추가 운영 부담, (2) HermesTalk의 group-room/네이티브 칸반 야망과 상당 부분 **중복/대체** — 즉 Paperclip 채택 시 HermesTalk의 멀티에이전트 파트는 사실상 불필요해질 수 있음. (3) 학습곡선(조직도·티켓·거버넌스 개념).
+- **다음 액션 후보**:
+  1. `npx paperclipai onboard --yes`로 로컬 :3100 기동 → 어댑터로 maccoder 1명 붙여 "직원" 동작 확인(가벼운 PoC).
+  2. 되면 architect/designer/coder/reviewer/reporter를 직원으로 등록해 **#4를 Paperclip에서** 구현(네이티브 칸반 대신).
+- **판단 포인트**: "Hermes 네이티브 칸반(방식 B)으로 충분한가 vs Paperclip의 조직/거버넌스가 필요한가". 여러 역할·예산·감사가 중요하면 Paperclip, 단순 태스크 큐면 네이티브 칸반.
+
+---
+> 진행할 때: 하나씩 골라서 요청하면 그 항목만 통제된 방식으로 세팅.
+> 지금 상태: #2·#3 완료. 다음 후보 = #1(llm-wiki, 가벼움) / #6 Paperclip PoC(#4·#5 대체 검토) / #4 네이티브 칸반 파이프라인.
