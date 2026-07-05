@@ -20,22 +20,28 @@
 | 구성요소 | 값 |
 |---|---|
 | Hermes Agent | 소스: `~/.hermes/hermes-agent` (uv venv). 업데이트 §6 |
-| 게이트웨이(상시) | `maccoder`:8642 · `news`:8643 · `trading`:8644 (프로필 `.env`의 `API_SERVER_PORT`) |
-| 칸반 워커 프로필(게이트웨이 없음) | `architect` · `coder` · `reviewer` (dispatch가 필요 시 spawn) |
+| **default = 맥비 🐝** (기본 비서) | 프로필 폴더 없음 — **`~/.hermes/` 루트 자체**가 default 프로필(SOUL·config·.env·memories). 정체성은 `~/.hermes/SOUL.md`에 명시. **공유 칸반 dispatcher 담당(유일)** |
+| 게이트웨이(상시) | `maccoder`(맥코더, 코딩전문):8642 · `news`(뉴스 브리퍼):8643 · `trading`(트레이딩 분석가):8644 (프로필 `.env`의 `API_SERVER_PORT`). **dispatch는 OFF**(§2) |
+| 칸반 워커 프로필(게이트웨이 없음) | `architect`·`designer`·`coder`·`reviewer`·`reporter` (5역할 파이프라인, dispatch가 필요 시 spawn) |
+| 프로필 정체성 | 각 프로필의 **SOUL.md + memories/MEMORY.md 이름**이 역할과 일치(클론 시 새던 "맥비" 잔재 정리 완료). default만 맥비 |
 | 인증 | 프로필 `.env` `API_SERVER_KEY` == 앱 `HERMES_API_TOKEN` (동일값, **채팅 필수**). 모델 자격증명은 `auth.json`→글로벌 `~/.hermes/auth.json` 심링크로 공유 |
 | webui | `nesquena/hermes-webui`, :8787, launchd `com.hermestalk.webui` |
 | HermesTalk(우리 앱) | 이 저장소(`app/`), :3000, Studio 포크 |
 | 공유 지식베이스 | llm-wiki `/Users/wooki/project/toy/hermes-wiki` (`WIKI_PATH` 글로벌, git 추적) |
 | cron | news `daily-news-brief`(매일 19:00) · maccoder `weekly-wiki-lint`(일 20:00) |
-| 자동기동(launchd) | `ai.hermes.gateway-{maccoder,news,trading}` + `com.hermestalk.webui` |
+| 자동기동(launchd) | `ai.hermes.gateway-{maccoder,news,trading}` + `com.hermestalk.webui` (default/맥비는 Hermes 기본 상시) |
 
 > ⚠️ 프로필별 게이트웨이는 **다른 포트 + 다른 텔레그램 봇 토큰**. 같은 토큰 두 곳 = Telegram polling 충돌.
+> ⚠️ 프로필 정체성은 **SOUL.md**에 둔다(memory 아님) — 클론(`--clone-from`)은 원본 memory의 이름/정체성까지 복사하니, 새 프로필 만들면 SOUL 교체 + memory의 이름 잔재 정리.
 
 ---
 
 ## 2. 3가지 오케스트레이션 방식 (구분 필수)
 - **방식 A — `delegate_task`** (한 게이트웨이 안 위임): 한 에이전트가 일회용 서브에이전트로 병렬 처리·취합. Orchestrator-Worker. HermesTalk `/group`이 시각화.
 - **방식 B — 네이티브 칸반** (여러 프로필 협업): 글로벌 `~/.hermes/kanban.db` 공유 보드. 태스크에 `--assignee`(=역할), `link parent child`로 의존성, `dispatch`가 ready 태스크의 assignee 프로필 워커를 격리 workspace에 spawn. Sequential Pipeline / 역할 핸드오프. **← 회사 시나리오 핵심.**
+  - **dispatch = 게이트웨이 내장 스케줄러(코드, 모델 아님)**. config `kanban.dispatch_in_gateway: true` + `dispatch_interval_seconds`. 각 태스크는 **assignee 프로필**로 spawn되므로 dispatch하는 게이트웨이의 정체성은 작업과 무관.
+  - 🚨 **한 보드에는 dispatcher를 정확히 1개만.** 여러 게이트웨이가 모두 `dispatch_in_gateway: true`면(기본값) + 수동 `hermes kanban dispatch`까지 겹치면 **같은 태스크를 서로 claim/reclaim 반복(churn)** → 워커가 헛돎. **해결: dispatcher 1개(항상 켜진 default/맥비)만 `true`, 나머지 게이트웨이는 `false`**, 수동 드라이버는 게이트웨이 자동이 있으면 쓰지 않음.
+  - 워커가 완료 후 `blocked{kind:needs_input, review-required}`로 self-block 가능(핸드오프 게이트) → 승인은 `kanban unblock <id> && kanban complete <id>`, 자동 흐름 원하면 태스크 body에 "block 말고 done" 명시. 워커가 모델 응답에서 멈추면 해당 워커 프로세스 kill 후 재dispatch.
 - **Paperclip** (외부 플랫폼): 에이전트를 "회사 직원(조직도·목표·거버넌스·예산)"으로. adapter로 Hermes 연결. Node+Postgres 별도 설치(§docs/EXPLORE-NEXT #6).
 
 ---
@@ -80,19 +86,23 @@ hermes --profile <p> cron run <id>     # 즉시 1회 테스트
 - 결과 확인: webui(:8787) 해당 프로필 → Tasks 패널 / Sessions. 출력물 `~/.hermes/profiles/<p>/cron/output/`.
 - 텔레그램 푸시는 `--deliver telegram` + 프로필에 봇 토큰.
 
-### 4.4 역할 파이프라인(방식 B, 회사 핵심) — 검증된 레시피
-architect → coder → reviewer (필요 시 designer/reporter 추가). 실증 완료.
+### 4.4 역할 파이프라인(방식 B, 회사 핵심) — 검증된 레시피 (5역할 실증)
+architect → designer → coder → reviewer → reporter (프로필 5개, 각 SOUL 차별화). 실증 완료(gcd·roman 데모).
+산출물 파일로 핸드오프: `ARCHITECTURE.md`(architect) → `DESIGN.md`(designer) → `roman.py`+테스트+`IMPLEMENTATION.md`(coder) → `REVIEW.md`(reviewer) → `REPORT.md`(reporter).
 ```bash
 WS=<공유 workspace 절대경로>; mkdir -p "$WS"
-A=$(hermes kanban create "<설계 태스크>" --body "설계만, DESIGN.md 저장, 코드 금지" --assignee architect --workspace "dir:$WS" --json | jq -r .id)
-C=$(hermes kanban create "<구현 태스크>" --body "DESIGN.md 읽고 구현+테스트, IMPLEMENTATION.md" --assignee coder --parent "$A" --workspace "dir:$WS" --json | jq -r .id)
-R=$(hermes kanban create "<리뷰 태스크>" --body "설계·구현 검수, 테스트 실행, REVIEW.md에 PASS/CHANGES" --assignee reviewer --parent "$C" --workspace "dir:$WS" --json | jq -r .id)
-hermes kanban dispatch --dry-run       # 무엇이 spawn될지 미리보기(안전)
-hermes kanban dispatch --max 1         # ready 태스크 실행. 완료되면 다음 단계 자동 ready
+A=$(hermes kanban create "<상위설계>" --body "접근법·스코프·리스크만 ARCHITECTURE.md에. 코드/상세 시그니처 금지." --assignee architect --workspace "dir:$WS" --json | jq -r .id)
+D=$(hermes kanban create "<상세설계>" --body "ARCHITECTURE.md 읽고 DESIGN.md에 시그니처·데이터·엣지케이스·테스트계획. 코드 금지." --assignee designer --parent "$A" --workspace "dir:$WS" --json | jq -r .id)
+C=$(hermes kanban create "<구현>" --body "DESIGN.md대로 구현+테스트 실행 통과. IMPLEMENTATION.md. 완료되면 block말고 done." --assignee coder --parent "$D" --workspace "dir:$WS" --json | jq -r .id)
+R=$(hermes kanban create "<리뷰>" --body "설계·구현 검수, 테스트 실행, REVIEW.md에 PASS/CHANGES_REQUESTED." --assignee reviewer --parent "$C" --workspace "dir:$WS" --json | jq -r .id)
+P=$(hermes kanban create "<최종리포트>" --body "전 산출물 종합 REPORT.md(무엇을·결정·검증·남은일)." --assignee reporter --parent "$R" --workspace "dir:$WS" --json | jq -r .id)
+hermes kanban dispatch --dry-run       # 미리보기(안전)
+# 실행: dispatcher는 default(맥비) 게이트웨이가 60초마다 자동. 수동으로 겹쳐 돌리지 말 것(§2 churn).
 ```
 - **핸드오프**: parent done → child 자동 ready. 워커는 공유 workspace에서 앞 단계 산출물을 읽음.
-- **주의**: 워커가 완료 후 "review-required"로 self-block할 수 있음(needs_input) = 핸드오프 게이트. 승인하려면 `hermes kanban unblock <id> && hermes kanban complete <id>`. 자동 흐름 원하면 태스크 body에 "block 말고 done 처리" 명시.
-- **약한 모델**이면: 역할을 더 좁게, 각 태스크 body에 입출력·검증기준 명확히, reviewer 단계를 검증 게이트로 강하게.
+- **🚨 dispatcher 1개만**(§2): 수동 `hermes kanban dispatch`를 게이트웨이 자동과 동시에 돌리면 churn. default만 dispatch ON이면 수동 불필요.
+- self-block(needs_input/review-required) → `kanban unblock <id> && kanban complete <id>`. 워커가 모델 응답에서 멈추면 그 워커 kill 후 재dispatch.
+- **약한 모델**이면: 역할을 더 좁게, 각 태스크 body에 입출력·검증기준 명확히, reviewer 단계를 검증 게이트로 강하게, 태스크 `--max-runtime` 넉넉히(느린 모델 reclaim churn 방지).
 
 ### 4.5 안전한 Hermes 업데이트 → §6
 

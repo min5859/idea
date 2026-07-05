@@ -20,10 +20,12 @@
 - **확인 위치**: webui(:8787) news 프로필 전환 → Sessions(api_server 세션) / Tasks 패널. 출력은 `~/.hermes/profiles/news/cron/output/`.
 - 남은 것: 텔레그램 푸시 원하면 봇 토큰 발급 후 `--deliver telegram`으로 edit.
 
-## 4. kanban 파이프라인: architect → coder → reviewer — ✅ PoC 완료(3역할)
-- **실증됨(2026-07-04)**: 프로필 architect/coder/reviewer 생성(clone+auth공유+SOUL 차별화) → 공유 보드에 의존성 체인 태스크(`link parent child`) → `dispatch`가 역할별 워커 spawn → 핸드오프. gcd 함수 데모: architect가 DESIGN.md → coder가 gcd.py+테스트(TDD 12 passed)+IMPLEMENTATION.md → reviewer가 REVIEW.md(PASS, 파일:라인 근거). 레시피는 `docs/AI-GUIDE.md §4.4`.
-- 배운 점: 워커가 완료 후 "review-required" self-block(needs_input) 가능 → `unblock`+`complete`로 승인. 워커는 게이트웨이 불필요(dispatch가 spawn).
-- 남은 확장: designer/reporter 추가(5역할), 게이트웨이 내장 디스패처 자동화.
+## 4. kanban 파이프라인: architect → designer → coder → reviewer → reporter — ✅ 5역할 완료
+- **실증됨(2026-07-04/05)**: 5개 역할 프로필 생성(clone+auth공유+SOUL 차별화) → 공유 보드 의존성 체인(`link parent child`) → default(맥비) dispatcher가 역할별 워커 spawn → 핸드오프. roman 변환기 데모 전 단계 완주: ARCHITECTURE.md→DESIGN.md→roman.py+테스트+IMPLEMENTATION.md→REVIEW.md→REPORT.md. 레시피 `docs/AI-GUIDE.md §4.4`.
+- **배운 점(중요)**:
+  - **dispatcher는 보드당 1개만.** 게이트웨이 4개 모두 `dispatch_in_gateway:true`(기본) + 수동 드라이버까지 겹쳐 **churn**(같은 태스크 claim/reclaim 반복) 발생 → **default만 dispatch ON, 나머지 OFF**로 정리(config.yaml).
+  - 워커 self-block(review-required) → `unblock`+`complete`. 워커 모델 행 시 kill 후 재dispatch로 복구.
+  - 정체성은 SOUL에. 클론이 원본 memory의 "맥비" 이름을 복사 → 각 프로필 memory 이름 정리 완료.
 - 원 설계 메모(방식 B):
 - **각 역할 = 프로필(assignee).** `hermes kanban create --assignee architect ...` 식으로 태스크를 역할에 배정하면 디스패처가 해당 프로필 게이트웨이를 기동해 claim·처리, 부모-자식 의존성/핸드오프 지원.
   - 참고: 예전에 삭제한 `pm/frontend-eng/reviewer/tauri-backend`가 **바로 이 패턴**(칸반이 역할별 워커 프로필로 만든 것)이었음.
