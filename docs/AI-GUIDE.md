@@ -26,7 +26,8 @@
 | 프로필 정체성 | 각 프로필의 **SOUL.md + memories/MEMORY.md 이름**이 역할과 일치(클론 시 새던 "맥비" 잔재 정리 완료). default만 맥비 |
 | 인증 | 프로필 `.env` `API_SERVER_KEY` == 앱 `HERMES_API_TOKEN` (동일값, **채팅 필수**). 모델 자격증명은 `auth.json`→글로벌 `~/.hermes/auth.json` 심링크로 공유 |
 | webui | `nesquena/hermes-webui`, :8787, launchd `com.hermestalk.webui` |
-| HermesTalk(우리 앱) | 이 저장소(`app/`), :3000, Studio 포크 |
+| HermesTalk(우리 앱) | 이 저장소(`app/`), :3000, Studio 포크 (수동 dev, 미상시) |
+| Paperclip (PoC) | `npx paperclipai onboard`, :3100, 데이터 `~/.paperclip/`. **수동 재기동**(launchd 아님). `hermes_local` 내장 어댑터로 Hermes 직원 연결 |
 | 공유 지식베이스 | llm-wiki `/Users/wooki/project/toy/hermes-wiki` (`WIKI_PATH` 글로벌, git 추적) |
 | cron | news `daily-news-brief`(매일 19:00) · maccoder `weekly-wiki-lint`(일 20:00) |
 | 자동기동(launchd) | `ai.hermes.gateway-{maccoder,news,trading}` + `com.hermestalk.webui` (default/맥비는 Hermes 기본 상시) |

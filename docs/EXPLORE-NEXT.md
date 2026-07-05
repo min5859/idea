@@ -62,6 +62,11 @@
 | **Codex 사용** | ✅ 직원으로 Codex/Claude Code/Hermes 다 가능 |
 | **유지보수 최소화** | ⚠️ **주의**: Node+Postgres 스택 하나 더 상시 운영. 이미 게이트웨이 3 + webui + HermesTalk 도는 위에 추가 |
 
+### 🟡 PoC 진행상황 (2026-07-05, 이어서 할 것)
+- ✅ **설치·기동 완료**: `npx paperclipai onboard --yes` → :3100(임베디드 Postgres, 로컬). 데이터 `~/.paperclip/instances/default/`. ⚠️ 재부팅 시 **수동 재기동**(launchd 아님).
+- ✅ **핵심 발견**: 패키지판 Paperclip에 **`hermes_local`·`hermes_gateway` 내장 어댑터**가 이미 있음 → 어댑터 README가 말한 소스(`registry.ts`) 수정/별도 npm 설치 **불필요**. (그 외 acpx_local·codex_local·claude_local·http·process 등 내장)
+- ⏳ **미완(다음)**: UI(http://127.0.0.1:3100)에서 ① 회사 생성(현재 company=[]) → ② 직원 추가(어댑터 `hermes_local`, 모델·이름) → ③ 이슈 생성+배정 → ④ heartbeat로 Hermes 처리 관찰.
+
 ### 결론 / 추천
 - **#4·#5의 정답에 가까움.** architect→…→reporter를 네이티브 칸반으로 손수 짜는 것보다, **Paperclip이 조직도·역할·목표·거버넌스·비용통제를 기본 제공**하므로 훨씬 완성형. Hermes agent들(maccoder/news/trading 또는 역할 전용)을 어댑터로 "직원"으로 붙이면 됨.
 - **트레이드오프**: (1) Node/Postgres 서비스 추가 운영 부담, (2) HermesTalk의 group-room/네이티브 칸반 야망과 상당 부분 **중복/대체** — 즉 Paperclip 채택 시 HermesTalk의 멀티에이전트 파트는 사실상 불필요해질 수 있음. (3) 학습곡선(조직도·티켓·거버넌스 개념).
